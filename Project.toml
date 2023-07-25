@@ -1,0 +1,13 @@
+name = "Enlsip"
+uuid = "3b6b6f7c-2618-4f84-9471-bb6274760cd4"
+authors = ["pierre-borie"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
