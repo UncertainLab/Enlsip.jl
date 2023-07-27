@@ -7,8 +7,8 @@ Problems that can be solved using Enlsip are modeled as follows:
 
 ```math
 \begin{aligned}
-\min \quad & \dfrac{1}{2} \|r(x)\|^2 \\
-\text{s.t} & c_i(x) = 0, \quad i =1,\ldots,q \\
+\min \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
+\text{s.t.} \quad & c_i(x) = 0, \quad i =1,\ldots,q \\
 & c_j(x) \geq 0, \quad j=q+1,\ldots,\ell, \\
 \end{aligned}
 ```
@@ -95,7 +95,6 @@ jac_r(x::Vector) = [1. -1. 0;
 
 # Constraints (one equality and box constraints)
 c(x::Vector) = [48.0 - x[1]^2-x[2]^2-x[3]^2]
-
 jac_c(x::Vector) = [ -2x[1] -2x[2] -2x[3]]
 x_l = [-4.5, -4.5, -5.0]
 x_u = [4.5, 4.5, 5.0] 
