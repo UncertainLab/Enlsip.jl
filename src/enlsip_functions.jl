@@ -1,3 +1,5 @@
+export EnslipSolution
+
 #=
     pseudo_rank (diag_T, ε_rank)
 
@@ -2667,6 +2669,7 @@ end
 ##### Enlsip solver #####
 
 abstract type AsbtractEnlsipSolution end
+
 """
     EnslipSolution
 
@@ -2680,8 +2683,8 @@ Fields are the following:
 
 * `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
 """
-struct EnslipSolution <: AsbtractEnlsipSolution
-    exit_code::Int64
+struct EnlsipSolution <: AsbtractEnlsipSolution
+    solved::Bool
     sol::Vector
     obj_value::Float64
 end
@@ -2931,5 +2934,6 @@ function enlsip(x0::Vector{Float64},
     close(io)
     verbose && (s -> println(s)).(readlines(output_file))
     rm(output_file)
-    return EnslipSolution(exit_code, x_opt, f_opt)
+    solved = exit_code > 0
+    return EnlsipSolution(solved, x_opt, f_opt)
 end
