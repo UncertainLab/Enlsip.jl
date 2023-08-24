@@ -52,9 +52,9 @@
     
     x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n]
 
-    CRmodel = EnlsipModel(;residuals=r, nb_parameters=n, nb_residuals=m, starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
+    CRmodel = CNLSModel(r,n,m ;starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
 
-    CR_sol = solve(CRmodel)
+    CR_sol = solve(CRmodel,silent=false)
 
     @test r(x0) ≈ CRmodel.residuals.reseval(x0)
     @test c(x0) ≈ CRmodel.constraints.conseval(x0)
@@ -63,7 +63,7 @@
     @test nb_eq == CRmodel.nb_eqcons
     @test nb_constraints == CRmodel.nb_cons
     @test size(x0,1) == CRmodel.nb_parameters
-    @test typeof(CR_sol.exit_code) <: Int
+    @test typeof(CR_sol.solved) == Bool
     @test isfinite(CR_sol.obj_value)
     @test size(CR_sol.sol,1) == n
     

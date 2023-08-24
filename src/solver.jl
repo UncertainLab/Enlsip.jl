@@ -3,9 +3,9 @@ export solve
 """
     solution = solve(model)
 
-Once a [`EnlsipModel`](@ref) has been instantiated, this function solves the optimzation problem associated by using the method implemented in Enlsip.
+Once a [`CNLSModel`](@ref) has been instantiated, this function solves the optimzation problem associated by using the method implemented in Enlsip.
 
-This function returns an object of type [`EnlsipSolution`](@ref).
+This function returns an object of type [`CNLSResult`](@ref).
 
 The following optionnal arguments can be provided:
 
@@ -27,7 +27,7 @@ The following optionnal arguments can be provided:
 
     - Default value is set to `false`
 """
-function solve(model::EnlsipModel; silent::Bool=false, max_iter::Int64 = 100, scaling::Bool=false)
+function solve(model::CNLSModel; silent::Bool=false, max_iter::Int64 = 100, scaling::Bool=false)
     ε = eps(eltype(model.starting_point))
     sqr_ε = sqrt(ε)
     sol = enlsip(model.starting_point, model.residuals, model.constraints, model.nb_parameters, model.nb_residuals, model.nb_eqcons, model.nb_cons, 

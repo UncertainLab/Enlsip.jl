@@ -1,4 +1,4 @@
-export EnslipSolution
+export CNLSResult
 
 #=
     pseudo_rank (diag_T, ε_rank)
@@ -2568,17 +2568,13 @@ function final_output_for_comparison(
     nb_iter::Int64,
     residuals::ResidualsFunction,
     constraints::ConstraintsFunction,
-    cx_sum::Float64)
+    cx_sum::Float64,
+    solving_time::Float64)
 
-
-    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully" : "\nAlgorithm failed")
-        
-    println(io,s_success)
-    @printf(io, "\nExit code = %8d    Number of iterations = %5d",
-        exit_code, nb_iter)
+    @printf(io, "\nNumber of iterations = %5d", nb_iter)
 
     rx2 = dot(iter.rx, iter.rx)
-    @printf(io, "\n\nSquare sum of residuals          : %s \nSum of squared constraints value : %s\n",
+    @printf(io, "\n\nSquare sum of residuals                 : %s \nSum of squared active constraints value : %s\n",
         mimic_fortran_e_format(rx2, 6), mimic_fortran_e_format(cx_sum, 6))
  
 
@@ -2586,7 +2582,11 @@ function final_output_for_comparison(
     @printf(io, "\nNumber of jacobian residuals evaluations   : %3d", residuals.nb_jacres_eval)
 
     @printf(io, "\nNumber of constraints evaluations          : %3d", constraints.nb_conseval)
-    @printf(io, "\nNumber of jacobian constraints evaluations : %3d\n\n", constraints.nb_jaccons_eval)
+    @printf(io, "\nNumber of jacobian constraints evaluations : %3d", constraints.nb_jaccons_eval)
+    @printf(io, "\n\nSolving time (seconds)                     : %.3f\n", solving_time)
+
+    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully" : "\nAlgorithm failed")
+    println(io,s_success)
 
 end
 
@@ -2671,19 +2671,19 @@ end
 abstract type AsbtractEnlsipSolution end
 
 """
-    EnslipSolution
+    CNLSResult
 
 Type returned by [`solve`](@ref) function, containing infos about termination of the Enlsip algorithm.
 
 Fields are the following:
 
-* `exit_code` : Integer value containing infos about the termination of the algorithm. A positive value indicates that the algorithm has converged, whereas a negative value indicates an abnormal termination of the algorithm.
+* `solved` : Boolean indicating if the algorithm has converged to a first order critical point satisfying some convergence criteria.
 
 * `sol` : Vector of the optimal solution (or the current solution at the last iteration if the algorithm did not converge).
 
 * `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
 """
-struct EnlsipSolution <: AsbtractEnlsipSolution
+struct CNLSResult <: AsbtractEnlsipSolution
     solved::Bool
     sol::Vector
     obj_value::Float64
@@ -2755,21 +2755,21 @@ function enlsip(x0::Vector{Float64},
         println(io, '*'^64)
         println(io, "*",' '^62,"*")
 
-        println(io, "*                          Enlsip 1.0                          *")
+        println(io, "*                          Enlsip 1.0.0                        *")
         println(io, "*",' '^62,"*")
         println(io, "* Julia version of a Fortran77 solver conceived and developed  *")
         println(io, "* by Per Lindstrom and Per Ake Wedin from the Institute        *")
-        println(io, "* of Informatation processing, University of Umea, Sweden.     *")
+        println(io, "* of Information processing, University of Umea, Sweden.       *")
         println(io, "*",' '^62,"*")
         println(io, '*'^64)
 
-        println(io, "\n\nNumber of parameters             : ", @sprintf("%5i", n))
+        println(io, "\n\nNumber of parameters                 : ", @sprintf("%5i", n))
         println(io, "Number of residuals                  : ", @sprintf("%5i", m))
         println(io, "Number of equality constraints       : ", @sprintf("%5i", q))
         println(io, "Number of inequality constraints     : ", @sprintf("%5i", (l - q)))
         println(io, "Constraints internal scaling         : $scaling\n")
         println(io, "\nIteration steps information\n")
-        println(io, "iter     objective      ||active_constraints||²     ||p||         α       reduction")
+        println(io, "iter     objective      ||active_constraints||²    ||p||          α        reduction")
     end
     
 
@@ -2777,10 +2777,8 @@ function enlsip(x0::Vector{Float64},
 
     verbose && output_header_for_comparison(io)
 
-    nb_iteration = 0
-    nb_eval = 0
-    # Double relative precision
-    ε_float = eps(eltype(x0))
+    start_time = time()
+    nb_iteration = 0    
     # Vector of penalty constants
     K = [zeros(l) for i = 1:4]
 
@@ -2926,7 +2924,8 @@ function enlsip(x0::Vector{Float64},
             # Algorithm has terminated
             x_opt = x
             f_opt = dot(rx,rx)
-           verbose && final_output_for_comparison(io, iter, exit_code, nb_iteration, r, c, active_cx_sum)
+            solving_time = time() - start_time
+            verbose && final_output_for_comparison(io, iter, exit_code, nb_iteration, r, c, active_cx_sum, solving_time)
         end
     end
 
@@ -2935,5 +2934,5 @@ function enlsip(x0::Vector{Float64},
     verbose && (s -> println(s)).(readlines(output_file))
     rm(output_file)
     solved = exit_code > 0
-    return EnlsipSolution(solved, x_opt, f_opt)
+    return CNLSResult(solved, x_opt, f_opt)
 end

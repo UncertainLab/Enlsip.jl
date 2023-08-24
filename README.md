@@ -31,11 +31,11 @@ To add Enlsip, use Julia's package manager by typing the following command insid
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, you need to define to create a model of your problem with the `EnlsipModel` structure.
+First, you need to define to create a model of your problem with the `CNLSModel` structure.
 
 ### Creating a model
 
-An object of type `EnlsipModel` can be created using a constructor, whose arguments are the following:
+An object of type `CNLSModel` can be created using a constructor, whose arguments are the following:
 
 * `residuals` : function that computes the vector of residuals
 
@@ -65,7 +65,7 @@ An object of type `EnlsipModel` can be created using a constructor, whose argume
 
 Then, once your model is instantiated, you can call the `solve` function to solve your problem.
 
-This function returns an object of type `EnlsipSolution`, whose fields are the following:
+This function returns an object of type `CNLSResult`, whose fields are the following:
 
 * `exit_code` : Integer value containing infos about the termination of the algorithm. A positive value indicates that the algorithm has converged, whereas a negative value indicates an abnormal termination of the algorithm.
 
@@ -103,14 +103,14 @@ x_u = [4.5, 4.5, 5.0]
 x0 = [-5.0, 5.0, 0.0]
 
 # Instantiate a model associated with the problem 
-hs65_model = Enlsip.EnlsipModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, nb_parameters=n, nb_residuals=m, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+hs65_model = Enlsip.CNLSModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
 
 # Call of the `solve` function
 hs65_sol = Enlsip.solve(hs65_model)
 
 # Print solution and objective value
 
-println("Algorithm successfully terminated : ", hs65_sol.xit_code > 0 )
+println("Algorithm successfully terminated : ", hs65_sol.solved )
 println("Optimal solution : ", hs65_sol.sol)
 println("Optimal objective value : ", hs65_sol.obj_value)
 ```

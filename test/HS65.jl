@@ -16,8 +16,8 @@
 
     x0 = [-5.0, 5.0, 0.0]
 
-    hs65_model = Enlsip.EnlsipModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
-    hs65_sol = solve(hs65_model,silent=true)
+    hs65_model = Enlsip.CNLSModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+    hs65_sol = solve(hs65_model,silent=false)
 
     @test r(x0) ≈ hs65_model.residuals.reseval(x0)
     @test vcat(c(x0),x0-x_l,x_u-x0) ≈ hs65_model.constraints.conseval(x0)
@@ -25,7 +25,7 @@
     @test nb_eq == hs65_model.nb_eqcons
     @test nb_constraints == hs65_model.nb_cons
     @test size(x0,1) == hs65_model.nb_parameters
-    @test typeof(hs65_sol.exit_code) <: Int
+    @test typeof(hs65_sol.solved) == Bool
     @test isfinite(hs65_sol.obj_value)
     @test size(hs65_sol.sol,1) == n
 end

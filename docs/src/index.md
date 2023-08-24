@@ -3,11 +3,11 @@
 Documentation for Enlsip.jl
 
 ```@docs
-Enlsip.EnlsipModel
+Enlsip.CNLSModel
 ```
 
 ```@docs
-Enlsip.EnlsipModel()
+Enlsip.CNLSModel()
 ```
 
 ```@docs
@@ -15,5 +15,5 @@ Enlsip.solve
 ```
 
 ```@docs
-Enlsip.EnlsipSolution
+Enlsip.CNLSResult
 ```
