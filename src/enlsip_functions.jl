@@ -1,4 +1,4 @@
-export CNLSResult
+
 
 #=
     pseudo_rank (diag_T, ε_rank)
@@ -2668,26 +2668,7 @@ end
 
 ##### Enlsip solver #####
 
-abstract type AsbtractEnlsipSolution end
 
-"""
-    CNLSResult
-
-Type returned by [`solve`](@ref) function, containing infos about termination of the Enlsip algorithm.
-
-Fields are the following:
-
-* `solved` : Boolean indicating if the algorithm has converged to a first order critical point satisfying some convergence criteria.
-
-* `sol` : Vector of the optimal solution (or the current solution at the last iteration if the algorithm did not converge).
-
-* `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
-"""
-struct CNLSResult <: AsbtractEnlsipSolution
-    solved::Bool
-    sol::Vector
-    obj_value::Float64
-end
 
 
 #=
