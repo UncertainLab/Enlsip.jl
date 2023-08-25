@@ -4,9 +4,14 @@ using Documenter
 using Enlsip
 
 makedocs(
-    sitename = "Enlsip",
+    sitename = "Enlsip.jl",
     format = Documenter.HTML(),
-    modules = [Enlsip]
+    modules = [Enlsip],
+    pages = [
+        "Home" => "index.md",
+        "How to use" => "tutorial.md",
+        "API" => "api.md"
+    ]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.

@@ -1,4 +1,4 @@
-export AbstractCNLSModel, CNLSModel
+export AbstractCNLSModel, CNLSModel, CNLSResult
 
 #= Structures where the first two fields are the functions evaluating residuals or constraints and the associated jacobian matrix
 =#
@@ -174,6 +174,16 @@ function CNLSModel(
     return CNLSModel(residuals_evalfunc, constraints_evalfunc, starting_point, nb_parameters, nb_residuals, nb_eqcons, nb_constraints)
 end
 
+#= TODO
+
+Faire une structure mutable CnlsModel qui contient toutes les infos du modèle avec possibilité de les ajouter par l'utilisateur
+    Doit y avoir les fonctions pour ajouter ces infos comme sur Jump (sauf que c'est limité à des fonctions qui retournent des vecteurs)
+
+Faire une autre structure non mutable EnlsipModel, qui remplace le CNLSModel AsbtractCNLSResult
+
+Faire de CNLSResult des attributs du nouveau CnlsModel
+=#
+
 function box_constraints(x_low::Vector, x_upp::Vector)
 
     n = size(x_low,1)
@@ -282,3 +292,28 @@ function instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq
 
     return constraints_evalfunc
 end
+
+abstract type AsbtractCNLSResult end
+
+"""
+    CNLSResult
+
+Type returned by [`solve`](@ref) function, containing infos about termination of the Enlsip algorithm.
+
+Fields are the following:
+
+* `solved` : Boolean indicating if the algorithm has converged to a first order critical point satisfying some convergence criteria.
+
+* `sol` : Vector of the optimal solution (or the current solution at the last iteration if the algorithm did not converge).
+
+* `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
+"""
+struct CNLSResult <: AsbtractCNLSResult
+    solved::Bool
+    sol::Vector
+    obj_value::Float64
+end
+
+solution(output::CNLSResult) = output.sol
+objective_value(output::CNLSResult) = output.obj_value
+status(output::CNLSResult) = output.solved
