@@ -103,7 +103,7 @@ x_u = [4.5, 4.5, 5.0]
 x0 = [-5.0, 5.0, 0.0]
 
 # Instantiate a model associated with the problem 
-hs65_model = Enlsip.CNLSModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+hs65_model = Enlsip.EnlsipModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
 
 # Call of the `solve` function
 hs65_sol = Enlsip.solve(hs65_model)
