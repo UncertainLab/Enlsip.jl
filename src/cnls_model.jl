@@ -1,4 +1,4 @@
-export AbstractCNLSModel, CNLSModel, CNLSResult
+export AbstractCnlsModel, CnlsModel, CnlsResult
 
 #= Structures where the first two fields are the functions evaluating residuals or constraints and the associated jacobian matrix
 =#
@@ -85,15 +85,15 @@ function jac_forward_diff(h_eval, x::Vector)
     return Jh
 end
 
-abstract type AbstractCNLSModel end
+abstract type AbstractCnlsModel end
 
 
 """
-    CNLSModel
+    CnlsModel
 
 Structure modeling an instance of a constrainted nonlinear least squares problem 
 """
-struct CNLSModel <: AbstractCNLSModel
+struct CNLSModel <: AbstractCnlsModel
     residuals::ResidualsFunction
     constraints::ConstraintsFunction
     starting_point::Vector
@@ -105,10 +105,10 @@ end
 
 
 """
-    model = CNLSModel(residuals,nb_parameters,nb_residuals;
+    model = CnlsModel(residuals,nb_parameters,nb_residuals;
     starting_point,jacobian_residuals=nothing,eq_constraints=nothing,jacobian_eqcons=nothing,nb_eqcons,ineq_constraints=nothing,jacobian_ineqcons=nothing,nb_ineqcons,x_low,x_upp)
 
-Constructor for [`CNLSModel`](@ref)
+Constructor for [`CnlsModel`](@ref)
 
 Arguments are the following:
 
@@ -179,10 +179,118 @@ end
 Faire une structure mutable CnlsModel qui contient toutes les infos du modèle avec possibilité de les ajouter par l'utilisateur
     Doit y avoir les fonctions pour ajouter ces infos comme sur Jump (sauf que c'est limité à des fonctions qui retournent des vecteurs)
 
-Faire une autre structure non mutable EnlsipModel, qui remplace le CNLSModel AsbtractCNLSResult
+Faire une autre structure non mutable EnlsipModel, qui remplace le CnlsModel AsbtractCnlsResult
 
-Faire de CNLSResult des attributs du nouveau CnlsModel
+Faire de CnlsResult des attributs du nouveau CnlsModel
 =#
+
+mutable struct CnlsModel
+    residuals
+    nb_parameters::Int
+    nb_residuals::Int
+    starting_point::Vector{Float64}
+    jacobian_residuals
+    eq_constraints
+    jacobian_eqcons
+    nb_eqcons::Int
+    ineq_constraints
+    jacobian_ineqcons
+    nb_ineqcons::Int
+    x_low::Vector{Float64}
+    x_upp::Vector{Float64}
+    status::Int
+    sol::Vector{Float64}
+    obj_value::Float64
+end
+
+
+const status_codes = Dict(
+    0 => :unsolved,
+    1 => :successfully_solved,
+    -1 => :failed,
+    -2 => :maximum_iterations_exceeded,
+)
+
+status(model::CnlsModel) = status_codes[model.status]
+
+solution(model::CnlsModel) = model.sol
+
+objective_value(model::CnlsModel) = model.obj_value
+
+
+function CnlsModel(
+    residuals=nothing,
+    nb_parameters::Int64=0,
+    nb_residuals::Int64=0;
+    starting_point::Vector=zeros(Float64, nb_parameters),
+    jacobian_residuals=nothing,
+    eq_constraints=nothing,
+    jacobian_eqcons=nothing,
+    nb_eqcons::Int64=0,
+    ineq_constraints=nothing,
+    jacobian_ineqcons=nothing,
+    nb_ineqcons::Int64=0,
+    x_low::Vector=fill!(Vector{Float64}(undef,nb_parameters), -Inf),
+    x_upp::Vector=fill!(Vector{Float64}(undef,nb_parameters), Inf))
+    
+
+    # Assertion test on residuals
+    @assert(typeof(residuals) <: Function, "The residuals argument must be a function")
+    @assert(nb_parameters > 0 && nb_residuals > 0, "The number of parameters and number of residuals must be strictly positive")
+    
+    # Assertion tests on constraints
+    @assert(eq_constraints !== nothing || ineq_constraints !== nothing || any(isfinite,x_low) || any(isfinite,x_upp), "There must be at least one constraint")
+    @assert(!(eq_constraints===nothing && nb_eqcons != 0) || !(typeof(eq_constraints <: Function) && nb_eqcons == 0), "Incoherent definition of equality constraints")
+    @assert(!(ineq_constraints===nothing && nb_ineqcons != 0) || !(typeof(ineq_constraints <: Function) && nb_ineqcons == 0), "Incoherent definition of inequality constraints")
+
+    initial_residuals = residuals(starting_point)
+
+    return CnlsModel(residuals, nb_parameters, nb_residuals, starting_point, jacobian_residuals, 
+    eq_constraints, jacobian_eqcons, nb_eqcons, ineq_constraints, jacobian_ineqcons, nb_ineqcons, x_low, x_upp,
+    0, starting_point, initial_residuals)
+end
+
+
+abstract type AbstractEnlsipModel end
+    
+struct EnlsipModel <: AbstractEnlsipModel
+    residuals::ResidualsFunction
+    constraints::ConstraintsFunction
+    starting_point::Vector
+    nb_parameters::Int64
+    nb_residuals::Int64
+    nb_eqcons::Int64
+    nb_cons::Int64
+end
+
+function EnlsipModel(
+    residuals,
+    nb_parameters::Int64,
+    nb_residuals::Int64,
+    starting_point::Vector{Float64},
+    jacobian_residuals,
+    eq_constraints,
+    jacobian_eqcons,
+    nb_eqcons::Int64,
+    ineq_constraints,
+    jacobian_ineqcons,
+    nb_ineqcons::Int64,
+    x_low::Vector,
+    x_upp::Vector)
+
+
+    residuals_evalfunc = (jacobian_residuals === nothing ? ResidualsFunction(residuals) : ResidualsFunction(residuals, jacobian_residuals))
+
+    if all(!isfinite,vcat(cm.x_low,cm.x_upp))
+        constraints_evalfunc = instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons)
+    else
+        constraints_evalfunc = instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons, x_low, x_upp)
+    end
+
+    nb_constraints = nb_eqcons + nb_ineqcons + count(isfinite, x_low) + count(isfinite,x_upp)
+
+    return EnlsipModel(residuals_evalfunc, constraints_evalfunc, starting_point, nb_parameters, nb_residuals, nb_eqcons, nb_constraints)
+end
 
 function box_constraints(x_low::Vector, x_upp::Vector)
 
@@ -293,10 +401,12 @@ function instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq
     return constraints_evalfunc
 end
 
-abstract type AsbtractCNLSResult end
+abstract type AsbtractCnlsResult end
+
+
 
 """
-    CNLSResult
+    CnlsResult
 
 Type returned by [`solve`](@ref) function, containing infos about termination of the Enlsip algorithm.
 
@@ -308,12 +418,26 @@ Fields are the following:
 
 * `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
 """
-struct CNLSResult <: AsbtractCNLSResult
+struct CnlsResult <: AsbtractCnlsResult
     solved::Bool
     sol::Vector
     obj_value::Float64
 end
 
-solution(output::CNLSResult) = output.sol
-objective_value(output::CNLSResult) = output.obj_value
-status(output::CNLSResult) = output.solved
+function convert_exit_code(code::Int64)
+    
+    status_code = à
+    if code > 0
+        status_code = 1
+    elseif code == -2
+        status_code = code
+    else
+        status_code = -1
+    end
+
+    return status_code
+end
+
+solution(output::CnlsResult) = output.sol
+objective_value(output::CnlsResult) = output.obj_value
+status(output::CnlsResult) = output.solved

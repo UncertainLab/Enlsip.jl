@@ -2914,6 +2914,5 @@ function enlsip(x0::Vector{Float64},
     close(io)
     verbose && (s -> println(s)).(readlines(output_file))
     rm(output_file)
-    solved = exit_code > 0
-    return CNLSResult(solved, x_opt, f_opt)
+    return exit_code, x_opt, f_opt
 end

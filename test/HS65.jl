@@ -16,7 +16,7 @@
 
     x0 = [-5.0, 5.0, 0.0]
 
-    hs65_model = Enlsip.CNLSModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+    hs65_model = Enlsip.CnlsModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
     hs65_sol = solve(hs65_model,silent=false)
 
     @test r(x0) ≈ hs65_model.residuals.reseval(x0)

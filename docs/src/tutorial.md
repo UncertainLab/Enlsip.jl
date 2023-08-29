@@ -14,13 +14,13 @@ Details on how to nstantiate and solve an optmization problem of the following f
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, a model must be created by using the [`CNLSModel`](@ref) structure.
+First, a model must be created by using the [`CnlsModel`](@ref) structure.
 
 ## Solving a model
 
 Then, once a model is instantiated, the [`solve`](@ref) function may be called.
 
-This function returns an object of type [`CNLSResult`](@ref).
+This function returns an object of type [`CnlsResult`](@ref).
 
 ## Examples
 
@@ -74,7 +74,7 @@ Finally, we can instantiate our model and solve it.
 
 ```julia
 # Instantiate a model associated with the problem 
-hs65_model = Enlsip.CNLSModel(r, n, m ;starting_point=x0, ineq_constraints = c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u, 
+hs65_model = Enlsip.CnlsModel(r, n, m ;starting_point=x0, ineq_constraints = c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u, 
 jacobian_residuals=jac_r, jacobian_ineqcons=jac_c)
 
 # Call of the `solve` function

@@ -31,11 +31,11 @@ To add Enlsip, use Julia's package manager by typing the following command insid
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, you need to define to create a model of your problem with the `CNLSModel` structure.
+First, you need to define to create a model of your problem with the `CnlsModel` structure.
 
 ### Creating a model
 
-An object of type `CNLSModel` can be created using a constructor, whose arguments are the following:
+An object of type `CnlsModel` can be created using a constructor, whose arguments are the following:
 
 * `residuals` : function that computes the vector of residuals
 
@@ -65,7 +65,7 @@ An object of type `CNLSModel` can be created using a constructor, whose argument
 
 Then, once your model is instantiated, you can call the `solve` function to solve your problem.
 
-This function returns an object of type `CNLSResult`, whose fields are the following:
+This function returns an object of type `CnlsResult`, whose fields are the following:
 
 * `exit_code` : Integer value containing infos about the termination of the algorithm. A positive value indicates that the algorithm has converged, whereas a negative value indicates an abnormal termination of the algorithm.
 
