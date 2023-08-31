@@ -36,7 +36,7 @@ function solve(model::CNLSModel; silent::Bool=false, max_iter::Int64 = 100, scal
     return sol
 end
 
-function solve!(model::CnlsModel, silent::Bool=false, max_iter::Int64=100, constraints_scaling::Bool=false)
+function solve!(model::CnlsModel; silent::Bool=false, max_iter::Int64=100, scaling::Bool=false)
 
     # Relative precision
     ε = eps(eltype(model.starting_point))
@@ -51,7 +51,7 @@ function solve!(model::CnlsModel, silent::Bool=false, max_iter::Int64=100, const
         constraints_evalfunc = instantiate_constraints_w_bounds(model.eq_constraints, model.jacobian_eqcons, model.ineq_constraints, model.jacobian_ineqcons, model.x_low, model.x_upp)
     end
 
-    nb_constraints = model.nb_eqcons + model.nb_ineqcons + count(isfinite, model.x_low) + count(isfinite, model.x_upp)
+    nb_constraints = total_nb_constraints(model)
 
     # Call ENLSIP-Julia
     exit_code, x_opt, f_opt = enlsip(model.starting_point, residuals_evalfunc, constraints_evalfunc, model.nb_parameters, model.nb_residuals, model.nb_eqcons, nb_constraints,

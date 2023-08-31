@@ -16,8 +16,21 @@
 
     x0 = [-5.0, 5.0, 0.0]
 
-    hs65_model = Enlsip.CnlsModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
-    hs65_sol = solve(hs65_model,silent=false)
+    hs65_model = Enlsip.CNLSModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+    hs65_sol = solve(hs65_model;silent=true)
+
+    hs65_model_2 = Enlsip.CnlsModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+    solve!(hs65_model_2;silent=true)
+
+
+    @test size(x0,1) == hs65_model_2.nb_parameters
+    @test r(x0) ≈ hs65_model_2.residuals(x0)
+    @test jac_r(x0) ≈ hs65_model_2.jacobian_residuals(x0)
+    @test vcat(c(x0),x0-x_l,x_u-x0) ≈ vcat(hs65_model_2.ineq_constraints(x0), x0-hs65_model_2.x_low, hs65_model_2.x_upp-x0)
+    @test nb_constraints == total_nb_constraints(hs65_model_2)
+    @test status(hs65_model_2) in values(status_codes)
+    @test typeof(solution(hs65_model_2)) <: Vector && size(solution(hs65_model_2),1) == n
+    @test typeof(objective_value(hs65_model_2)) <: Number && isfinite(objective_value(hs65_model_2))
 
     @test r(x0) ≈ hs65_model.residuals.reseval(x0)
     @test vcat(c(x0),x0-x_l,x_u-x0) ≈ hs65_model.constraints.conseval(x0)

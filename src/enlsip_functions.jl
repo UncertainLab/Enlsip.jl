@@ -138,7 +138,8 @@ function sub_search_direction(
 
     # Solving with stabilization
     elseif code == -1
-        b = -F_L11.Q' * cx[F_A.p]
+        b_buff = -cx[F_A.p]
+        b = F_L11.Q' * b_buff
         δp1 = UpperTriangular(F_L11.R[1:dimA, 1:dimA]) \ b[1:dimA]
         p1 = F_L11.P[1:rankA, 1:rankA] * [δp1; zeros(rankA - dimA)]
         d_temp = -J1 * p1 - rx
