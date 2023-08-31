@@ -1,5 +1,5 @@
 export AbstractCnlsModel, CnlsModel
-export total_nb_constraints, status, solution, objective_value, status_codes
+export total_nb_constraints, status, solution, objective_value, dict_status_codes
 
 #= Structures where the first two fields are the functions evaluating residuals or constraints and the associated jacobian matrix
 =#
@@ -89,7 +89,7 @@ end
 """
     AbstractCnlsModel
 
-Abstract type for [`Cnlsmodel`](@ref) structure.
+Abstract type for [`CnlsModel`](@ref) structure.
 """
 abstract type AbstractCnlsModel end
 
@@ -448,20 +448,6 @@ end
 abstract type AsbtractCnlsResult end
 
 
-
-"""
-    CnlsResult
-
-Type returned by [`solve`](@ref) function, containing infos about termination of the Enlsip algorithm.
-
-Fields are the following:
-
-* `solved` : Boolean indicating if the algorithm has converged to a first order critical point satisfying some convergence criteria.
-
-* `sol` : Vector of the optimal solution (or the current solution at the last iteration if the algorithm did not converge).
-
-* `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
-"""
 struct CnlsResult <: AsbtractCnlsResult
     solved::Bool
     sol::Vector

@@ -18,9 +18,9 @@ First, a model must be created by using the [`CnlsModel`](@ref) structure.
 
 ## Solving a model
 
-Then, once a model is instantiated, the [`solve`](@ref) function may be called.
+Then, once a model is instantiated, the [`solve!`](@ref) function may be called.
 
-This function returns an object of type [`CnlsResult`](@ref).
+
 
 ## Examples
 

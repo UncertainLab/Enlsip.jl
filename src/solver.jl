@@ -1,11 +1,20 @@
 export solve, solve!
 
+
+function solve(model::CNLSModel; silent::Bool=false, max_iter::Int64 = 100, scaling::Bool=false)
+    ε = eps(eltype(model.starting_point))
+    sqr_ε = sqrt(ε)
+    exit_code, x_opt, f_opt = enlsip(model.starting_point, model.residuals, model.constraints, model.nb_parameters, model.nb_residuals, model.nb_eqcons, model.nb_cons, 
+    verbose=!silent, scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
+    sol = CnlsResult(exit_code >0, x_opt, f_opt)
+    return sol
+end
+
 """
-    solution = solve(model)
+    solve!(model)
 
 Once a [`CnlsModel`](@ref) has been instantiated, this function solves the optimzation problem associated by using the method implemented in Enlsip.
 
-This function returns an object of type [`CnlsResult`](@ref).
 
 The following optionnal arguments can be provided:
 
@@ -27,15 +36,6 @@ The following optionnal arguments can be provided:
 
     - Default value is set to `false`
 """
-function solve(model::CNLSModel; silent::Bool=false, max_iter::Int64 = 100, scaling::Bool=false)
-    ε = eps(eltype(model.starting_point))
-    sqr_ε = sqrt(ε)
-    exit_code, x_opt, f_opt = enlsip(model.starting_point, model.residuals, model.constraints, model.nb_parameters, model.nb_residuals, model.nb_eqcons, model.nb_cons, 
-    verbose=!silent, scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
-    sol = CnlsResult(exit_code >0, x_opt, f_opt)
-    return sol
-end
-
 function solve!(model::CnlsModel; silent::Bool=false, max_iter::Int64=100, scaling::Bool=false)
 
     # Relative precision
@@ -58,7 +58,7 @@ function solve!(model::CnlsModel; silent::Bool=false, max_iter::Int64=100, scali
     verbose=!silent, scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
 
     # Update of solution related fields in model
-    model.status = convert_exit_code(exit_code)
+    model.status_code = convert_exit_code(exit_code)
     model.sol = x_opt
     model.obj_value = f_opt
     return

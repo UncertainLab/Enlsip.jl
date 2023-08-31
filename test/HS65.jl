@@ -28,7 +28,7 @@
     @test jac_r(x0) ≈ hs65_model_2.jacobian_residuals(x0)
     @test vcat(c(x0),x0-x_l,x_u-x0) ≈ vcat(hs65_model_2.ineq_constraints(x0), x0-hs65_model_2.x_low, hs65_model_2.x_upp-x0)
     @test nb_constraints == total_nb_constraints(hs65_model_2)
-    @test status(hs65_model_2) in values(status_codes)
+    @test status(hs65_model_2) in values(dict_status_codes)
     @test typeof(solution(hs65_model_2)) <: Vector && size(solution(hs65_model_2),1) == n
     @test typeof(objective_value(hs65_model_2)) <: Number && isfinite(objective_value(hs65_model_2))
 
