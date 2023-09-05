@@ -2586,7 +2586,7 @@ function final_output_for_comparison(
     @printf(io, "\nNumber of jacobian constraints evaluations : %3d", constraints.nb_jaccons_eval)
     @printf(io, "\n\nSolving time (seconds)                     : %.3f\n", solving_time)
 
-    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully" : "\nAlgorithm failed")
+    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully\n\n" : "\nAlgorithm failed\n\n")
     println(io,s_success)
 
 end
@@ -2734,6 +2734,7 @@ function enlsip(x0::Vector{Float64},
     verbose::Bool=false,output_file::String="enlsip.out")
     
     function output_header_for_comparison(io)
+        print(io,"\n\n")
         println(io, '*'^64)
         println(io, "*",' '^62,"*")
 

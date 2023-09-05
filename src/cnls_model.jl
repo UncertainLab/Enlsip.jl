@@ -207,6 +207,19 @@ mutable struct CnlsModel <: AbstractCnlsModel
     obj_value::Float64
 end
 
+function convert_exit_code(code::Int64)
+    
+    status_code = 0
+    if code > 0
+        status_code = 1
+    elseif code == -2
+        status_code = code
+    else
+        status_code = -1
+    end
+
+    return status_code
+end
 
 const dict_status_codes = Dict(
     0 => :unsolved,
@@ -219,15 +232,40 @@ const dict_status_codes = Dict(
 """
     status(model)
 
-Returns readable information on the solving status of `model` (see [`CnlsModel`](@ref))
+Returns readable information on the solving status of `model`. 
+
+See also:[`CnlsModel`](@ref).
 """
 status(model::CnlsModel) = dict_status_codes[model.status_code]
 
+"""
+    solution(model)
+
+Once the given `model` has been solved, this function returns the optimal solution, or last solution obtained if no convergence, as a `Vector` of approriate dimension.
+
+See also: [`solve!`](@ref) and [`CnlsModel`](@ref).
+"""
 solution(model::CnlsModel) = model.sol
 
+"""
+    objective_value(model)
+
+Once the given `model` has been solved, returns the value of the objective function, i.e. sum of squared residuals functions, computed at the optimal solution.
+If no convergence, this value is computed at the last solution obtained.
+
+See also: [`CnlsModel`](@ref) and [`solution`](@ref).
+"""
 objective_value(model::CnlsModel) = model.obj_value
 
+"""
+    total_nb_constraints(model)
+
+Returns the total number of constraints, i.e. equalities, inequalities and bounds, of the given `model`.
+
+See also: [`CnlsModel`](@ref).
+"""
 total_nb_constraints(model::CnlsModel) = model.nb_eqcons + model.nb_ineqcons + count(isfinite, model.x_low) + count(isfinite, model.x_upp)
+
 """
     model = CnlsModel(residuals, nb_parameters, nb_residuals)
 
@@ -295,46 +333,7 @@ function CnlsModel(
 end
 
 
-abstract type AbstractEnlsipModel end
-    
-struct EnlsipModel <: AbstractEnlsipModel
-    residuals::ResidualsFunction
-    constraints::ConstraintsFunction
-    starting_point::Vector
-    nb_parameters::Int64
-    nb_residuals::Int64
-    nb_eqcons::Int64
-    nb_cons::Int64
-end
 
-function EnlsipModel(
-    residuals,
-    nb_parameters::Int64,
-    nb_residuals::Int64,
-    starting_point::Vector{Float64},
-    jacobian_residuals,
-    eq_constraints,
-    jacobian_eqcons,
-    nb_eqcons::Int64,
-    ineq_constraints,
-    jacobian_ineqcons,
-    nb_ineqcons::Int64,
-    x_low::Vector,
-    x_upp::Vector)
-
-
-    residuals_evalfunc = (jacobian_residuals === nothing ? ResidualsFunction(residuals) : ResidualsFunction(residuals, jacobian_residuals))
-
-    if all(!isfinite,vcat(cm.x_low,cm.x_upp))
-        constraints_evalfunc = instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons)
-    else
-        constraints_evalfunc = instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons, x_low, x_upp)
-    end
-
-    nb_constraints = nb_eqcons + nb_ineqcons + count(isfinite, x_low) + count(isfinite,x_upp)
-
-    return EnlsipModel(residuals_evalfunc, constraints_evalfunc, starting_point, nb_parameters, nb_residuals, nb_eqcons, nb_constraints)
-end
 
 function box_constraints(x_low::Vector, x_upp::Vector)
 
@@ -444,30 +443,3 @@ function instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq
 
     return constraints_evalfunc
 end
-
-abstract type AsbtractCnlsResult end
-
-
-struct CnlsResult <: AsbtractCnlsResult
-    solved::Bool
-    sol::Vector
-    obj_value::Float64
-end
-
-function convert_exit_code(code::Int64)
-    
-    status_code = 0
-    if code > 0
-        status_code = 1
-    elseif code == -2
-        status_code = code
-    else
-        status_code = -1
-    end
-
-    return status_code
-end
-
-solution(output::CnlsResult) = output.sol
-objective_value(output::CnlsResult) = output.obj_value
-status(output::CnlsResult) = output.solved

@@ -52,19 +52,21 @@
     
     x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n]
 
-    CRmodel = CnlsModel(r,n,m ;starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
+    Crmodel = CnlsModel(r,n,m ;starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
 
-    CR_sol = solve(CRmodel,silent=false)
+    CR_sol = solve!(Crmodel,silent=false)
 
-    @test r(x0) ≈ CRmodel.residuals.reseval(x0)
-    @test c(x0) ≈ CRmodel.constraints.conseval(x0)
-    @test jac_res(x0) ≈ CRmodel.residuals.jacres_eval(x0)
-    @test jac_cons(x0) ≈ CRmodel.constraints.jaccons_eval(x0)
-    @test nb_eq == CRmodel.nb_eqcons
-    @test nb_constraints == CRmodel.nb_cons
-    @test size(x0,1) == CRmodel.nb_parameters
-    @test typeof(CR_sol.solved) == Bool
-    @test isfinite(CR_sol.obj_value)
-    @test size(CR_sol.sol,1) == n
+
+    @test size(x0,1) == Crmodel.nb_parameters
+    @test r(x0) ≈ Crmodel.residuals(x0)
+    @test jac_res(x0) ≈ Crmodel.jacobian_residuals(x0)
+    @test c(x0) ≈ Crmodel.eq_constraints(x0)
+    @test Crmodel.ineq_constraints === nothing
+    @test all(!isfinite, Crmodel.x_low) && all(!isfinite, Crmodel.x_upp)
+    @test nb_constraints == total_nb_constraints(Crmodel)
+    @test status(Crmodel) in values(dict_status_codes)
+    @test typeof(solution(Crmodel)) <: Vector && size(solution(Crmodel),1) == n
+    @test typeof(objective_value(Crmodel)) <: Number && isfinite(objective_value(Crmodel))
+  
     
 end
