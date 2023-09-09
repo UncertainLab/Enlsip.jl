@@ -1,6 +1,7 @@
-# How to use
+# [Usage](@id Usage)
 
-Details on how to nstantiate and solve an optmization problem of the following form (as described in [Home](@ref)):
+This sections provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
+As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
 \begin{aligned}
@@ -10,16 +11,46 @@ Details on how to nstantiate and solve an optmization problem of the following f
 \end{aligned}
 ```
 
+Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, as shown later in this section, they can be provided as vectors of lower and/or upper bounds, which is more convenient for this type of constraints.
+
+Also, the `Enlsip` solver works with double precision float numbers (i.e. type `Float64`).
+
 ## Instantiate a model
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, a model must be created by using the [`CnlsModel`](@ref) structure.
+First, a model must be created by using the [`CnlsModel`](@ref) constructor. This constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem. 
+
+Although the package enables one to create linear unconstrained least squares, it is recommended to use it to solve nonlinear least squares with general constraints.
+
+The following three arguments are mandatory to create a model:
+
+* `residuals` : function that computes the vector of residuals
+    
+* `nb_parameters` : number of variables
+    
+* `nb_residuals` : number of residuals
+
+The following keywords arguments are optionnal and deal with constraints and jacobian matrices computations. If the jacobian matrices functions are not provided, they are computed numerically by forward differences within `Enlsip`.
+
+Argument             | Details
+---------------------|----------------------------------------------
+`starting_point`     | initial solution (can be an infeasbile point)
+`jacobian_residuals` | function computing the jacobian matrix of the residuals
+`eq_constraints`     | function computing the equality constraints
+`jacobian_eqcons`    | function computing the jacobian matrix of the equality constraints
+`nb_eqcons`          | number of equality constraints
+`ineq_constraints`   | function computing the inequality constraints
+`jacobian_ineqcons`  | function computing the jacobian matrix of the inequality constraints
+`nb_ineqcons`        | number of inequality constraints
+`x_low`              | vector of lower bounds
+`x_upp`              | vector of upper bounds
+
+
 
 ## Solving a model
 
-Then, once a model is instantiated, the [`solve!`](@ref) function may be called.
-
+Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. See the [API](@ref) for additionnal information on optionnal arguments that can be passed when calling the solver.
 
 
 ## Examples
@@ -78,7 +109,7 @@ hs65_model = Enlsip.CnlsModel(r, n, m ;starting_point=x0, ineq_constraints = c, 
 jacobian_residuals=jac_r, jacobian_ineqcons=jac_c)
 
 # Call of the `solve` function
-hs65_sol = Enlsip.solve(hs65_model,silent=true)
+hs65_sol = Enlsip.solve!(hs65_model,silent=true)
 ```
 
 [^1]: W. Hock and K. Schittkowski. Test Examples for Nonlinear Programming Codes, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

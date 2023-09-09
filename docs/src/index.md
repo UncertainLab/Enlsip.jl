@@ -23,6 +23,7 @@ $c:\mathbb{R}^n\rightarrow\mathbb{R}^{q+\ell}$, concatenation of the constraints
 
 Note that box constraints are modeled as general inequality constraints.
 
+
 ## How to install
 
 To add Enlsip, use Julia's package manager by typing the following command inside the REPL:
@@ -30,6 +31,17 @@ To add Enlsip, use Julia's package manager by typing the following command insid
 ```julia
 using Pkg
 Pkg.add("Enlsip")
+```
+
+## How to use
+
+Using `Enlsip.jl` to solve optimization problems consists in, first, instantiating a model and then call the solver on it. 
+
+Details and examples with problems from the litterature on the [Usage](@ref) and [API](@ref) pages.
+
+## Contents
+
+```@contents
 ```
 
 [^1]: P. Lindström and P.Å. Wedin, Gauss-Newton based algorithms for constrained nonlinear least squares problems, Institute of Information processing, University of Umeå Sweden, 1988.

@@ -9,7 +9,7 @@ makedocs(
     modules = [Enlsip],
     pages = [
         "Home" => "index.md",
-        "How to use" => "tutorial.md",
+        "Usage" => "tutorial.md",
         "API" => "api.md"
     ]
 )

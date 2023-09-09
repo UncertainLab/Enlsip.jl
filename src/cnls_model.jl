@@ -106,55 +106,6 @@ end
 
 
 
-function CNLSModel(
-    residuals=nothing,
-    nb_parameters::Int64=0,
-    nb_residuals::Int64=0;
-    starting_point::Vector=zeros(Float64, nb_parameters),
-    jacobian_residuals=nothing,
-    eq_constraints=nothing,
-    jacobian_eqcons=nothing,
-    nb_eqcons::Int64=0,
-    ineq_constraints=nothing,
-    jacobian_ineqcons=nothing,
-    nb_ineqcons::Int64=0,
-    x_low::Vector=fill!(Vector{Float64}(undef,nb_parameters), -Inf),
-    x_upp::Vector=fill!(Vector{Float64}(undef,nb_parameters), Inf))
-    
-
-    # Assertion test on residuals
-    @assert(typeof(residuals) <: Function, "The argument res_func must be a function")
-    @assert(nb_parameters > 0 && nb_residuals > 0, "The number of parameters and number of residuals must be strictly positive")
-    
-    # Assertion tests on constraints
-    @assert(eq_constraints !== nothing || ineq_constraints !== nothing || any(isfinite,x_low) || any(isfinite,x_upp), "There must be at least one constraint")
-    @assert(!(eq_constraints===nothing && nb_eqcons != 0) || !(typeof(eq_constraints <: Function) && nb_eqcons == 0), "Incoherent definition of equality constraints")
-    @assert(!(ineq_constraints===nothing && nb_ineqcons != 0) || !(typeof(ineq_constraints <: Function) && nb_ineqcons == 0), "Incoherent definition of inequality constraints")
-
-    residuals_evalfunc = (jacobian_residuals === nothing ? ResidualsFunction(residuals) : ResidualsFunction(residuals, jacobian_residuals))
-
-    if all(!isfinite,vcat(x_low,x_upp))
-        constraints_evalfunc = instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons)
-    else
-        constraints_evalfunc = instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons, x_low, x_upp)
-    end
-
-    nb_constraints = nb_eqcons + nb_ineqcons + count(isfinite, x_low) + count(isfinite,x_upp)
-
-    return CNLSModel(residuals_evalfunc, constraints_evalfunc, starting_point, nb_parameters, nb_residuals, nb_eqcons, nb_constraints)
-end
-
-#= TODO
-
-Faire une structure mutable CnlsModel qui contient toutes les infos du modèle avec possibilité de les ajouter par l'utilisateur
-    Doit y avoir les fonctions pour ajouter ces infos comme sur Jump (sauf que c'est limité à des fonctions qui retournent des vecteurs)
-
-Faire une autre structure non mutable EnlsipModel, qui remplace le CnlsModel AsbtractCnlsResult
-
-Faire de CnlsResult des attributs du nouveau CnlsModel
-=#
-
-
 """
     CnlsModel
 
@@ -186,7 +137,7 @@ Structure modeling an instance of a constrainted nonlinear least squares problem
     
     * `x_low` and `x_upp` : respectively vectors of lower and upper bounds
 
-    * `status_code` : integer indicating the solving status of the model. Call function [`status`](@ref)
+    * `status_code` : integer indicating the solving status of the model.
 """
 mutable struct CnlsModel <: AbstractCnlsModel
     residuals
