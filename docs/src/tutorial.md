@@ -19,11 +19,14 @@ Also, the `Enlsip` solver works with double precision float numbers (i.e. type `
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, a model must be created by using the [`CnlsModel`](@ref) constructor. This constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem. 
+First, a model of type [`CnlsModel`](@ref) must be instantiated. 
+
+
+The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem. 
 
 Although the package enables one to create linear unconstrained least squares, it is recommended to use it to solve nonlinear least squares with general constraints.
 
-The following three arguments are mandatory to create a model:
+The three following positional arguments are mandatory to create a model:
 
 * `residuals` : function that computes the vector of residuals
     
@@ -33,24 +36,48 @@ The following three arguments are mandatory to create a model:
 
 The following keywords arguments are optionnal and deal with constraints and jacobian matrices computations. If the jacobian matrices functions are not provided, they are computed numerically by forward differences within `Enlsip`.
 
-Argument             | Details
----------------------|----------------------------------------------
-`starting_point`     | initial solution (can be an infeasbile point)
-`jacobian_residuals` | function computing the jacobian matrix of the residuals
-`eq_constraints`     | function computing the equality constraints
-`jacobian_eqcons`    | function computing the jacobian matrix of the equality constraints
-`nb_eqcons`          | number of equality constraints
-`ineq_constraints`   | function computing the inequality constraints
-`jacobian_ineqcons`  | function computing the jacobian matrix of the inequality constraints
-`nb_ineqcons`        | number of inequality constraints
-`x_low`              | vector of lower bounds
-`x_upp`              | vector of upper bounds
+ Argument             | Details
+:---------------------|:----------------------------------------------
+ `starting_point`     | initial solution (can be an infeasbile point)
+ `jacobian_residuals` | function computing the jacobian matrix of the residuals
+ `eq_constraints`     | function computing the equality constraints
+ `jacobian_eqcons`    | function computing the jacobian matrix of the equality constraints
+ `nb_eqcons`          | number of equality constraints
+ `ineq_constraints`   | function computing the inequality constraints
+ `jacobian_ineqcons`  | function computing the jacobian matrix of the inequality constraints
+ `nb_ineqcons`        | number of inequality constraints
+ `x_low`              | vector of lower bounds
+ `x_upp`              | vector of upper bounds
 
 
 
 ## Solving a model
 
-Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. See the [API](@ref) for additionnal information on optionnal arguments that can be passed when calling the solver.
+Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model.
+
+```@docs
+Enlsip.solve!
+```
+
+Once Enlsip has been called, one can get additional info about the success, or failure, of the algorithm by calling one of the following functions:
+
+ Function                 |
+:--------------------------|
+[`solution`](@ref)        |
+[`status`](@ref)          |
+[`objective_value`](@ref) | 
+
+```@docs
+Enlsip.solution
+```
+
+```@docs
+Enlsip.status
+```
+
+```@docs
+Enlsip.objective_value
+```
 
 
 ## Examples

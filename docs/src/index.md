@@ -1,10 +1,9 @@
 # [Enlsip.jl documentation](@id Home)
 
-Documentation for Enlsip.jl
 
 ## Introduction
 
-Package `Enlsip` is the Julia version of an eponymous Fortran77 library (ENLSIP standing for Easy Nonlinear Least Squares Inequalities Program) designed to solve nonlinear least squares problems under nonlinear constraints.
+Package `Enlsip.jl` is the Julia version of an eponymous Fortran77 library (ENLSIP standing for Easy Nonlinear Least Squares Inequalities Program) designed to solve nonlinear least squares problems under nonlinear constraints.
 
 The optimization method implemented in Enlsip was conceived in the late 1980s by two swedish authors named Per Lindström and Per Åke Wedin [^1].
 
@@ -37,7 +36,7 @@ Pkg.add("Enlsip")
 
 Using `Enlsip.jl` to solve optimization problems consists in, first, instantiating a model and then call the solver on it. 
 
-Details and examples with problems from the litterature on the [Usage](@ref) and [API](@ref) pages.
+Details and examples with problems from the litterature in the [Usage](@ref) page.
 
 ## Contents
 

@@ -111,7 +111,7 @@ end
 
 Structure modeling an instance of a constrainted nonlinear least squares problem.
 
-
+This structure contains the following attributes:
 
     * `residuals` : function that computes the vector of residuals
     
@@ -184,8 +184,6 @@ const dict_status_codes = Dict(
     status(model)
 
 Returns readable information on the solving status of `model`. 
-
-See also:[`CnlsModel`](@ref).
 """
 status(model::CnlsModel) = dict_status_codes[model.status_code]
 
@@ -193,8 +191,6 @@ status(model::CnlsModel) = dict_status_codes[model.status_code]
     solution(model)
 
 Once the given `model` has been solved, this function returns the optimal solution, or last solution obtained if no convergence, as a `Vector` of approriate dimension.
-
-See also: [`solve!`](@ref) and [`CnlsModel`](@ref).
 """
 solution(model::CnlsModel) = model.sol
 
@@ -203,8 +199,6 @@ solution(model::CnlsModel) = model.sol
 
 Once the given `model` has been solved, returns the value of the objective function, i.e. sum of squared residuals functions, computed at the optimal solution.
 If no convergence, this value is computed at the last solution obtained.
-
-See also: [`CnlsModel`](@ref) and [`solution`](@ref).
 """
 objective_value(model::CnlsModel) = model.obj_value
 
@@ -220,36 +214,36 @@ total_nb_constraints(model::CnlsModel) = model.nb_eqcons + model.nb_ineqcons + c
 """
     model = CnlsModel(residuals, nb_parameters, nb_residuals)
 
-Constructor for [`CnlsModel`](@ref)
+Constructor for [`CnlsModel`](@ref).
 
-The following arguments are mandatory to instantiate a model:
+* Positional arguments
 
-    * `residuals` : function that computes the vector of residuals
+    - `residuals` : function that computes the vector of residuals
     
-    * `nb_parameters` : number of variables
+    - `nb_parameters` : number of variables
     
-    * `nb_residuals` : number of residuals
+    - `nb_residuals` : number of residuals
     
 
-The following can be provided as optionnal arguments:
+* Keywords arguments :
 
-    * `stating_point` : initial solution (default is a vector of zeros of appropriate dimension)
+    - `stating_point` : initial solution (default is a vector of zeros of appropriate dimension)
     
-    * `jacobian_residuals` : function that computes the jacobian matrix of the residuals. If not passed as argument, it is computed numericcaly by forward differences
+    - `jacobian_residuals` : function that computes the jacobian matrix of the residuals. If not passed as argument, it is computed numericcaly by forward differences
     
-    * `eq_constraints` : function that computes the vector of equality constraints
+    - `eq_constraints` : function that computes the vector of equality constraints
     
-    * `jacobian_eqcons` : function that computes the jacobian matrix of the equality constraints. If not passed as argument, it is computed numericcaly by forward differences
+    - `jacobian_eqcons` : function that computes the jacobian matrix of the equality constraints. If not passed as argument, it is computed numericcaly by forward differences
     
-    * `nb_eqcons` : number of equality constraints
+    - `nb_eqcons` : number of equality constraints
     
-    * `ineq_constraints` : function that computes the vector of inequality constraints
+    - `ineq_constraints` : function that computes the vector of inequality constraints
     
-    * `jacobian_ineqcons` : function that computes the jacobian matrix of the inequality constraints. If not passed as argument, it is computed numericcaly by forward differences
+    - `jacobian_ineqcons` : function that computes the jacobian matrix of the inequality constraints. If not passed as argument, it is computed numericcaly by forward differences
     
-    * `nb_ineqcons` : number of inequality constraints
+    - `nb_ineqcons` : number of inequality constraints
     
-    * `x_low` and `x_upp` : respectively vectors of lower and upper bounds
+    - `x_low` and `x_upp` : respectively vectors of lower and upper bounds
 """
 function CnlsModel(
     residuals=nothing,

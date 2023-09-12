@@ -10,7 +10,7 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Usage" => "tutorial.md",
-        "API" => "api.md"
+        "Reference" => "reference.md"
     ]
 )
 
@@ -18,10 +18,3 @@ deploydocs(
     repo = "github.com/UncertainLab/Enlsip.jl.git",
     devbranch = "master"
 )
-
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#

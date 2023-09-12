@@ -54,7 +54,7 @@
 
     Crmodel = CnlsModel(r,n,m ;starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
 
-    CR_sol = solve!(Crmodel,silent=false)
+    CR_sol = solve!(Crmodel)
 
 
     @test size(x0,1) == Crmodel.nb_parameters

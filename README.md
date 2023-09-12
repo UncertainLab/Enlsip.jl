@@ -63,15 +63,8 @@ An object of type `CnlsModel` can be created using a constructor, whose argument
 
 ### Solving a model
 
-Then, once your model is instantiated, you can call the `solve` function to solve your problem.
+Then, once your model is instantiated, you can call the `solve!` function to solve your problem.
 
-This function returns an object of type `CnlsResult`, whose fields are the following:
-
-* `exit_code` : Integer value containing infos about the termination of the algorithm. A positive value indicates that the algorithm has converged, whereas a negative value indicates an abnormal termination of the algorithm.
-
-* `sol` : Vector of the optimal solution (or the current solution at the last iteration if the algorithm did not converge).
-
-* `obj_value` : Value of the objective function (i.e euclidean norm of the residuals) computed at the vector `sol`.
 
 ### Example with problem 65 from  Hock Schittkowski collection
 
@@ -103,14 +96,15 @@ x_u = [4.5, 4.5, 5.0]
 x0 = [-5.0, 5.0, 0.0]
 
 # Instantiate a model associated with the problem 
-hs65_model = Enlsip.EnlsipModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
+hs65_model = Enlsip.CnlsModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
 
-# Call of the `solve` function
-hs65_sol = Enlsip.solve(hs65_model)
+
+# Call of the `solve!` function
+Enlsip.solve!(hs65_model)
 
 # Print solution and objective value
 
-println("Algorithm successfully terminated : ", hs65_sol.solved )
-println("Optimal solution : ", hs65_sol.sol)
-println("Optimal objective value : ", hs65_sol.obj_value)
+println("Algorithm successfully terminated : ", Enlsip.status(hs65_model))
+println("Optimal solution : ", Enlsip.solution(hs65_model))
+println("Optimal objective value : ", ENlsip.objective_value(hs65_model))
 ```
