@@ -1,5 +1,3 @@
-push!(LOAD_PATH,"../src/")
-
 using Documenter
 using Enlsip
 
@@ -17,6 +15,5 @@ makedocs(
 deploydocs(
     repo = "github.com/UncertainLab/Enlsip.jl.git",
     versions = ["stable" => "v^", "v0.9.0"],
-    devbranch = "master",
-    tag_prefix = "v0.9.0"
+    devbranch = "master"
 )
