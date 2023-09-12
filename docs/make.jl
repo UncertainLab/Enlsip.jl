@@ -16,6 +16,6 @@ makedocs(
 
 deploydocs(
     repo = "github.com/UncertainLab/Enlsip.jl.git",
-    versions = ["stable" => "v^", "v0.9.0", devurl => devurl],
+    versions = ["stable" => "v^", "v0.9.0"],
     devbranch = "master"
 )
