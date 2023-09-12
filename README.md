@@ -1,6 +1,11 @@
 # Enlsip.jl
 
-This package is the Julia version of an optimization library originally written in Fortran77 and designed to solve nonlinear least squares problems under nonlinear constraints.
+
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/)
+
+
+
+Package `Enlsip.jl` is the Julia version of an optimization library originally written in Fortran77 and designed to solve nonlinear least squares problems under nonlinear constraints.
  The optimization method implemented in Enlsip was conceived by two swedish authors, Per Lindstrom and Per Ake Wedin from the Institute of Informatation processing of the University of Umea in Sweden.
 
 Problems that can be solved using Enlsip are modeled as follows:
