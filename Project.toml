@@ -1,7 +1,7 @@
 name = "Enlsip"
 uuid = "d5306a6b-d590-428d-a53a-eb3bb2d36f2d"
 authors = ["pierre-borie"]
-version = "0.8.0"
+version = "0.9.0"
 
 [deps]
 Formatting = "59287772-0a20-5a39-b81b-1366585eb4c0"
