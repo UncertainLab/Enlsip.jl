@@ -136,7 +136,7 @@ hs65_model = Enlsip.CnlsModel(r, n, m ;starting_point=x0, ineq_constraints = c, 
 jacobian_residuals=jac_r, jacobian_ineqcons=jac_c)
 
 # Call of the `solve` function
-hs65_sol = Enlsip.solve!(hs65_model,silent=true)
+Enlsip.solve!(hs65_model)
 ```
 
 [^1]: W. Hock and K. Schittkowski. Test Examples for Nonlinear Programming Codes, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

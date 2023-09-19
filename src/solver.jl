@@ -10,7 +10,7 @@ The following optionnal arguments can be provided:
 
 * `silent::Bool` 
     
-    - Set to `true` if one wants the algorithm to print details about the iterations and termination of the solver
+    - Set to `false` if one wants the algorithm to print details about the iterations and termination of the solver
 
     - Default value is set to `false`
 
@@ -26,7 +26,7 @@ The following optionnal arguments can be provided:
 
     - Default value is set to `false`
 """
-function solve!(model::CnlsModel; silent::Bool=false, max_iter::Int64=100, scaling::Bool=false)
+function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int64=100, scaling::Bool=false)
 
     # Relative precision
     ε = eps(eltype(model.starting_point))
