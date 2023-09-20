@@ -2738,7 +2738,7 @@ function enlsip(x0::Vector{Float64},
         println(io, '*'^64)
         println(io, "*",' '^62,"*")
 
-        println(io, "*                          Enlsip 0.9.0                        *")
+        println(io, "*                          Enlsip 0.9.1                        *")
         println(io, "*",' '^62,"*")
         println(io, "* Julia version of a Fortran77 solver conceived and developed  *")
         println(io, "* by Per Lindstrom and Per Ake Wedin from the Institute        *")

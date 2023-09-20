@@ -1,3 +1,10 @@
+```@meta 
+CurrentModule = Enlsip
+```
+
+```@setup tutorial
+using Enlsip
+```
 # [Usage](@id Usage)
 
 This sections provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
@@ -5,7 +12,7 @@ As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
 \begin{aligned}
-\min \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
+\underset{x}{\min} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
 \text{s.t.} \quad & c_i(x) = 0, \quad i =1,\ldots,q \\
 & c_j(x) \geq 0, \quad j=q+1,\ldots,\ell, \\
 \end{aligned}
@@ -51,7 +58,7 @@ The following keywords arguments are optionnal and deal with constraints and jac
 
 
 
-## Solving a model
+## [Solving a model](@id Solving a model)
 
 Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model.
 
@@ -59,10 +66,24 @@ Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function o
 Enlsip.solve!
 ```
 
-Once Enlsip has been called, one can get additional info about the success, or failure, of the algorithm by calling one of the following functions:
+By default, the algorithm will print some details about the iterations performed through during execution.
+
+Here are some details on how to read and understand the different columns of the output:
+
+ Column                        | Details
+:------------------------------|:----------------------------------------------
+ `iter`                        | iteration number
+ `objective`                   | value of the sum of squared residuals (i.e. objective function) at current point
+ $\vert\vert$ `active_constraints` $\vert\vert^2$     | value of the sum of squared active constraints at current point
+ $\vert\vert$ `p` $\vert\vert$ | norm of the search direction computed at current iteration
+ $\alpha$                      | value of the steplength computed at current iteration
+ `reduction`                   | reduction in the objective function performed at curret iteration
+
+
+Once the `Enlsip` solver has been called, one can get additional info about the success, or failure, of the algorithm by calling one of the following functions:
 
  Function                 |
-:--------------------------|
+:-------------------------|
 [`solution`](@ref)        |
 [`status`](@ref)          |
 [`objective_value`](@ref) | 
@@ -80,7 +101,7 @@ Enlsip.objective_value
 ```
 
 
-## Examples
+## [Examples](@id Examples)
 
 ### Problem 65 from Hock and Schittkowski collection[^1]
 
@@ -97,18 +118,20 @@ We show how to implement and solve the following problem:
 
 First, we provide the dimensions of the problems.
 
-```julia
+
+```@example tutorial
 # Dimensions of the problem
 
 n = 3 # number of parameters
 m = 3 # number of residuals
 nb_eq = 0 # number of equality constraints
 nb_constraints = 7 # number of inequality constraints
+nothing # hide
 ```
 
-Then we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point.
+Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point.
 
-```julia
+```@example tutorial
 # Residuals and jacobian matrix associated
 r(x::Vector) = [x[1] - x[2]; (x[1]+x[2]-10.0) / 3.0; x[3]-5.0]
 
@@ -126,17 +149,39 @@ x_u = [4.5, 4.5, 5.0] # upper bounds
 
 # Starting point 
 x0 = [-5.0, 5.0, 0.0]
+nothing # hide
 ```
 
-Finally, we can instantiate our model and solve it.
+A `CnlsModel` can now be instantiated.
 
-```julia
+```@example tutorial
 # Instantiate a model associated with the problem 
-hs65_model = Enlsip.CnlsModel(r, n, m ;starting_point=x0, ineq_constraints = c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u, 
-jacobian_residuals=jac_r, jacobian_ineqcons=jac_c)
+hs65_model = Enlsip.CnlsModel(r, n, m ;starting_point=x0, ineq_constraints = c, 
+nb_ineqcons = 1, x_low=x_l, x_upp=x_u, jacobian_residuals=jac_r, jacobian_ineqcons=jac_c)
+nothing # hide
+```
 
-# Call of the `solve` function
-Enlsip.solve!(hs65_model)
+Finally, the `solve!` function can be called on our model. In this example, we set the `silent` optionnal argument to `true` so no output will be printed. See previous [Solving a model](@ref) section for details about what is printed after solving a problem.
+Other optionnal arguments remain to default values.
+
+```@example tutorial
+Enlsip.solve!(hs65_model, silent=true)
+```
+
+Once `Enlsip` solver has been executed on a problem, one can check if the problem has been successfully solved or not.
+
+```@example tutorial
+Enlsip.status(hs65_model)
+```
+
+One can also get the optimal solution obtained and value of objective function at that point.
+
+```@example tutorial
+hs65_solution = Enlsip.solution(hs65_model)
+```
+
+```@example tutorial
+hs65_objective = Enlsip.objective_value(hs65_model)
 ```
 
 [^1]: W. Hock and K. Schittkowski. Test Examples for Nonlinear Programming Codes, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.
