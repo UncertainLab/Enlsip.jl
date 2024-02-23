@@ -55,33 +55,33 @@ Summarizes the useful informations about an iteration of the algorithm
 * `nb_newton_steps` : number of search direction computed using the method of Newton
 =#
 mutable struct Iteration
-    x::Vector
-    p::Vector
-    rx::Vector
-    cx::Vector
-    t::Int64
-    α::Float64
-    index_α_upp::Int64
-    λ::Vector
-    w::Vector
-    rankA::Int64
-    rankJ2::Int64
-    dimA::Int64
-    dimJ2::Int64
-    b_gn::Vector
-    d_gn::Vector
-    predicted_reduction::Float64
-    progress::Float64
-    grad_res::Float64
-    speed::Float64
-    β::Float64
+    x::Vector{<:AbstractFloat}
+    p::Vector{<:AbstractFloat}
+    rx::Vector{<:AbstractFloat}
+    cx::Vector{<:AbstractFloat}
+    t::Int
+    α::AbstractFloat
+    index_α_upp::Int
+    λ::Vector{<:AbstractFloat}
+    w::Vector{<:AbstractFloat}
+    rankA::Int
+    rankJ2::Int
+    dimA::Int
+    dimJ2::Int
+    b_gn::Vector{<:AbstractFloat}
+    d_gn::Vector{<:AbstractFloat}
+    predicted_reduction::AbstractFloat
+    progress::AbstractFloat
+    grad_res::AbstractFloat
+    speed::AbstractFloat
+    β::AbstractFloat
     restart::Bool
     first::Bool
     add::Bool
     del::Bool
-    index_del::Int64
-    code::Int64
-    nb_newton_steps::Int64
+    index_del::Int
+    code::Int
+    nb_newton_steps::Int
 end
 
 
@@ -107,10 +107,10 @@ Fields are the useful informations about active constraints at a point x :
     - Otherwise, it contains the length of each row in the matrix `A`
 =#
 mutable struct Constraint
-    cx::Vector{Float64}
-    A::Matrix{Float64}
+    cx::Vector{<:AbstractFloat}
+    A::Matrix{<:AbstractFloat}
     scaling::Bool
-    diag_scale::Vector{Float64}
+    diag_scale::Vector{<:AbstractFloat}
 end
 
 
@@ -171,17 +171,17 @@ Fields of this structure summarize infos about the qualification of the constrai
 
 =#
 mutable struct WorkingSet
-    q::Int64
-    t::Int64
-    l::Int64
-    active::Vector{Int64}
-    inactive::Vector{Int64}
+    q::Int
+    t::Int
+    l::Int
+    active::Vector{Int}
+    inactive::Vector{Int}
 end
 
 # Equivalent Fortran : DELETE in dblreduns.f
 # Moves the active constraint number s to the inactive set
 
-function delete_constraint!(W::WorkingSet, s::Int64)
+function delete_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
 
@@ -201,7 +201,7 @@ end
 # Equivalent Fortran : ADDIT in dblreduns.f
 # Add the inactive constraint nulber s to the active s
 
-function add_constraint!(W::WorkingSet, s::Int64)
+function add_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
     # s-th inactive constraint moved from inactive to active set

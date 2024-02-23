@@ -14,7 +14,7 @@ Parameters :
     the number of rows of matrix `T`.
 =#
 
-function pseudo_rank(diag_T::Vector{Float64}, ε_rank::Float64)
+function pseudo_rank(diag_T::Vector{<:AbstractFloat}, ε_rank::AbstractFloat)
 
     if isempty(diag_T) || abs(diag_T[1]) < ε_rank
         pseudo_rank = 0
@@ -114,18 +114,18 @@ Finally, the search direction is computed by forming : `p = Q1 * [p1 ; P3*p2]`
 * `d` : vector of size `m`, contains the right handside of the system solved to compute `p2`
 =# 
 function sub_search_direction(
-    J1::Matrix{Float64},
-    rx::Vector{Float64},
-    cx::Vector{Float64},
+    J1::Matrix{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
     F_A::Factorization,
     F_L11::Factorization,
     F_J2::Factorization,
-    n::Int64,
-    t::Int64,
-    rankA::Int64,
-    dimA::Int64,
-    dimJ2::Int64,
-    code::Int64)
+    n::Int,
+    t::Int,
+    rankA::Int,
+    dimA::Int,
+    dimJ2::Int,
+    code::Int)
 
     # Solving without stabilization 
     if code == 1
@@ -204,14 +204,14 @@ If `rankA = t`, the first system is solved, otherwise, the second one is solved.
 * `F_J2` : QR decomposition of Matrix `J2` defined in [`sub_search_direction`](@ref)
 =#
 function gn_search_direction(
-    J::Matrix{Float64},
-    rx::Vector{Float64},
-    cx::Vector{Float64},
+    J::Matrix{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
     F_A::Factorization,
     F_L11::Factorization,
-    rankA::Int64,
-    t::Int64,
-    ε_rank::Float64,
+    rankA::Int,
+    t::Int,
+    ε_rank::AbstractFloat,
     current_iter::Iteration)
 
     code = (rankA == t ? 1 : -1)
@@ -242,11 +242,11 @@ end
 
 function hessian_res!(
     r::ResidualsFunction,
-    x::Vector{Float64},
-    rx::Vector{Float64},
-    n::Int64,
-    m::Int64,
-    B::Matrix{Float64})
+    x::Vector{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    n::Int,
+    m::Int,
+    B::Matrix{<:AbstractFloat})
 
     # Only residuals evaluation
     r.ctrl = 1
@@ -287,13 +287,13 @@ end
 
 function hessian_cons!(
     c::ConstraintsFunction,
-    x::Vector{Float64},
-    λ::Vector{Float64},
-    active::Vector{Int64},
-    n::Int64,
-    l::Int64,
-    t::Int64,
-    B::Matrix{Float64})
+    x::Vector{<:AbstractFloat},
+    λ::Vector{<:AbstractFloat},
+    active::Vector{<:Int},
+    n::Int,
+    l::Int,
+    t::Int,
+    B::Matrix{<:AbstractFloat})
 
     # Only constraints evaluation
     c.ctrl = 1
@@ -348,17 +348,17 @@ end
 
 
 function newton_search_direction(
-    x::Vector{Float64},
+    x::Vector{<:AbstractFloat},
     c::ConstraintsFunction,
     r::ResidualsFunction,
-    active_cx::Vector{Float64},
+    active_cx::Vector{<:AbstractFloat},
     working_set::WorkingSet,
-    λ::Vector{Float64},
-    rx::Vector{Float64},
-    J::Matrix{Float64},
+    λ::Vector{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    J::Matrix{<:AbstractFloat},
     F_A::Factorization,
     F_L11::Factorization,
-    rankA::Int64)
+    rankA::Int)
 
 
     error = false
@@ -461,15 +461,15 @@ Then, computes estimates of lagrage multipliers by forming :
 Modifies in place the vector `λ` with the first order estimate of Lagrange multipliers.
 =#
 function first_lagrange_mult_estimate!(
-    A::Matrix{Float64},
-    λ::Vector{Float64},
-    ∇fx::Vector{Float64},
-    cx::Vector{Float64},
+    A::Matrix{<:AbstractFloat},
+    λ::Vector{<:AbstractFloat},
+    ∇fx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
     scaling_done::Bool,
-    diag_scale::Vector{Float64},
-    F::Factorization{Float64},
+    diag_scale::Vector{<:AbstractFloat},
+    F::Factorization{<:AbstractFloat},
     iter::Iteration,
-    ε_rank::Float64)
+    ε_rank::AbstractFloat)
 
     (t, n) = size(A)
     v = zeros(t)
@@ -514,14 +514,14 @@ end
 #                     T          T            T
 # Solves the system  A * λ = J(x) (r(x) + J(x) * p_gn))
 function second_lagrange_mult_estimate!(
-    J::Matrix{Float64},
+    J::Matrix{<:AbstractFloat},
     F_A::Factorization,
-    λ::Vector{Float64},
-    rx::Vector{Float64},
-    p_gn::Vector{Float64},
-    t::Int64,
+    λ::Vector{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    p_gn::Vector{<:AbstractFloat},
+    t::Int,
     scaling::Bool,
-    diag_scale::Vector{Float64})
+    diag_scale::Vector{<:AbstractFloat})
 
     J1 = (J*F_A.Q)[:, 1:t]
     b = J1' * (rx + J * p_gn)
@@ -537,7 +537,7 @@ end
 
 
 function minmax_lagrangian_mult(
-    λ::Vector{Float64},
+    λ::Vector{<:AbstractFloat},
     working_set::WorkingSet,
     active_C::Constraint)
     
@@ -572,13 +572,13 @@ end
 # Obtainted with the lagrange mulitpliers estimates
 
 function check_constraint_deletion(
-    q::Int64,
-    A::Matrix{Float64},
-    λ::Vector{Float64},
-    ∇fx::Vector{Float64},
+    q::Int,
+    A::Matrix{<:AbstractFloat},
+    λ::Vector{<:AbstractFloat},
+    ∇fx::Vector{<:AbstractFloat},
     scaling::Bool,
-    diag_scale::Vector{Float64},
-    grad_res::Float64)
+    diag_scale::Vector{<:AbstractFloat},
+    grad_res::AbstractFloat)
 
       
     (t, n) = size(A)
@@ -608,9 +608,9 @@ end
 # Move violated constraints to the working set
 
 function evaluate_violated_constraints(
-    cx::Vector{Float64},
+    cx::Vector{<:AbstractFloat},
     W::WorkingSet,
-    index_α_upp::Int64)
+    index_α_upp::Int)
 
     # Data
     ε = sqrt(eps(Float64))
@@ -635,7 +635,7 @@ end
 
 # Updates QR factorisation of A^T by appyling Givens rotations
 
-function update_QR_A(A::Matrix{Float64})
+function update_QR_A(A::Matrix{<:AbstractFloat})
     (t,n) = size(A)
     F_A = qr(A', ColumnNorm()) 
     Q1 = F_A.Q*Matrix(I,n,n)
@@ -644,11 +644,11 @@ function update_QR_A(A::Matrix{Float64})
 end
 # Returns 
 function update_QR_A(
-    Q::Matrix{Float64},
-    R::Matrix{Float64},
-    p::Vector{Int64},
-    s::Int64,
-    t::Int64)
+    Q::Matrix{<:AbstractFloat},
+    R::Matrix{<:AbstractFloat},
+    p::Vector{<:Int},
+    s::Int,
+    t::Int)
 
     # Update permutation vector, form permutation matrix, delete j-th column of matrix R 
     j = p[s]
@@ -705,17 +705,17 @@ Then, compute the search direction using Gauss-Newton method.
 =#
 function update_working_set(
     W::WorkingSet,
-    rx::Vector{Float64},
-    A::Matrix{Float64},
+    rx::Vector{<:AbstractFloat},
+    A::Matrix{<:AbstractFloat},
     C::Constraint,
-    ∇fx::Vector{Float64},
-    J::Matrix{Float64},
-    p_gn::Vector{Float64},
+    ∇fx::Vector{<:AbstractFloat},
+    J::Matrix{<:AbstractFloat},
+    p_gn::Vector{<:AbstractFloat},
     iter_k::Iteration,
-    ε_rank::Float64)
+    ε_rank::AbstractFloat)
 
 
-    λ = Vector{Float64}(undef, W.t)
+    λ = Vector{typeof(ε_rank)}(undef, W.t)
     
     F_A = qr(C.A', ColumnNorm())
     
@@ -843,8 +843,8 @@ Then, initialize the penalty constants.
 
 
 
-function init_working_set(cx::Vector{Float64}, K::Array{Array{Float64,1},1}, 
-    step::Iteration, q::Int64, l::Int64)
+function init_working_set(cx::Vector{<:AbstractFloat}, K::Array{Array{Float64,1},1}, 
+    step::Iteration, q::Int, l::Int)
 
     δ, ϵ, ε_rel = 0.1, 0.01, sqrt(eps(Float64))
 
@@ -882,16 +882,16 @@ end
 # Returns dimension when previous descent direction was computed with subspace minimization
 
 function subspace_min_previous_step(
-    τ::Vector{Float64},
-    ρ::Vector{Float64},
-    ρ_prk::Float64,
-    c1::Float64,
-    pseudo_rk::Int64,
-    previous_dimR::Int64,
-    progress::Float64,
-    predicted_linear_progress::Float64,
-    prelin_previous_dim::Float64,
-    previous_α::Float64)
+    τ::Vector{<:AbstractFloat},
+    ρ::Vector{<:AbstractFloat},
+    ρ_prk::AbstractFloat,
+    c1::AbstractFloat,
+    pseudo_rk::Int,
+    previous_dimR::Int,
+    progress::AbstractFloat,
+    predicted_linear_progress::AbstractFloat,
+    prelin_previous_dim::AbstractFloat,
+    previous_α::AbstractFloat)
 
     # Data
 
@@ -927,12 +927,12 @@ end
 # Returns dimension to use when previous descent direction was computed with Gauss-Newton method
 
 function gn_previous_step(
-    τ::Vector{Float64},
-    τ_prk::Float64,
-    mindim::Int64,
-    ρ::Vector{Float64},
-    ρ_prk::Float64,
-    pseudo_rank::Int64)
+    τ::Vector{<:AbstractFloat},
+    τ_prk::AbstractFloat,
+    mindim::Int,
+    ρ::Vector{<:AbstractFloat},
+    ρ_prk::AbstractFloat,
+    pseudo_rank::Int)
 
     # Data
     τ_max, ρ_min = 2e-1, 5e-1
@@ -961,24 +961,24 @@ end
 # β_k = sqrt(||b1||^2 + ||d1||^2) is an information used to compute the convergence rate
 
 function check_gn_direction(
-    b1nrm::Float64,
-    d1nrm::Float64,
-    d1nrm_as_km1::Float64,
-    dnrm::Float64,
-    active_c_sum::Float64,
-    iter_number::Int64,
-    rankA::Int64,
-    n::Int64,
-    m::Int64,
+    b1nrm::AbstractFloat,
+    d1nrm::AbstractFloat,
+    d1nrm_as_km1::AbstractFloat,
+    dnrm::AbstractFloat,
+    active_c_sum::AbstractFloat,
+    iter_number::Int,
+    rankA::Int,
+    n::Int,
+    m::Int,
     restart::Bool,
     constraint_added::Bool,
     constraint_deleted::Bool,
     W::WorkingSet,
-    cx::Vector{Float64},
-    λ::Vector{Float64},
+    cx::Vector{<:AbstractFloat},
+    λ::Vector{<:AbstractFloat},
     iter_km1::Iteration,
     scaling::Bool,
-    diag_scale::Vector{Float64})
+    diag_scale::Vector{<:AbstractFloat})
 
     # Data
     δ = 1e-1
@@ -1059,14 +1059,14 @@ end
 
 
 function determine_solving_dim(
-    previous_dimR::Int64,
-    rankR::Int64,
-    predicted_linear_progress::Float64,
-    obj_progress::Float64,
-    prelin_previous_dim::Float64,
+    previous_dimR::Int,
+    rankR::Int,
+    predicted_linear_progress::AbstractFloat,
+    obj_progress::AbstractFloat,
+    prelin_previous_dim::AbstractFloat,
     R::UpperTriangular{Float64,Array{Float64,2}},
-    y::Vector{Float64},
-    previous_α::Float64,
+    y::Vector{<:AbstractFloat},
+    previous_α::AbstractFloat,
     restart::Bool)
 
     # Data
@@ -1136,14 +1136,14 @@ end
 # Computes the dimensions of the subspaces where minimization should be done
 
 function choose_subspace_dimensions(
-    rx_sum::Float64,
-    rx::Vector{Float64},
-    active_cx_sum::Float64,
-    J1::Matrix{Float64},
-    t::Int64,
-    rankJ2::Int64,
-    rankA::Int64,
-    b::Vector{Float64},
+    rx_sum::AbstractFloat,
+    rx::Vector{<:AbstractFloat},
+    active_cx_sum::AbstractFloat,
+    J1::Matrix{<:AbstractFloat},
+    t::Int,
+    rankJ2::Int,
+    rankA::Int,
+    b::Vector{<:AbstractFloat},
     F_L11::Factorization,
     F_J2::Factorization,
     previous_iter::Iteration,
@@ -1210,16 +1210,16 @@ Check if the latest step was sufficientlt good and eventually recompute the sear
 function search_direction_analys(
     previous_iter::Iteration,
     current_iter::Iteration,
-    iter_number::Int64,
-    x::Vector{Float64},
+    iter_number::Int,
+    x::Vector{<:AbstractFloat},
     c::ConstraintsFunction,
     r::ResidualsFunction,
-    rx::Vector{Float64},
-    cx::Vector{Float64},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
     active_C::Constraint,
-    active_cx_sum::Float64,
-    p_gn::Vector{Float64},
-    J::Matrix{Float64},
+    active_cx_sum::AbstractFloat,
+    p_gn::Vector{<:AbstractFloat},
+    J::Matrix{<:AbstractFloat},
     working_set::WorkingSet,
     F_A::Factorization,
     F_L11::Factorization,
@@ -1313,16 +1313,16 @@ Compute and return the evaluation of the merit function at ``(x+\\alpha p,w)`` w
 
 function psi(
     x::Vector,
-    α::Float64,
+    α::AbstractFloat,
     p::Vector,
     r::ResidualsFunction,
     c::ConstraintsFunction,
     w::Vector,
-    m::Int64,
-    l::Int64,
-    t::Int64,
-    active::Vector{Int64},
-    inactive::Vector{Int64})
+    m::Int,
+    l::Int,
+    t::Int,
+    active::Vector{<:Int},
+    inactive::Vector{<:Int})
 
     rx_new, cx_new = zeros(m), zeros(l)
     penalty_constraint_sum = 0.0
@@ -1352,9 +1352,9 @@ end
 
 function assort!(
     K::Array{Array{Float64,1},1},
-    w::Vector{Float64},
-    t::Int64,
-    active::Vector{Int64})
+    w::Vector{<:AbstractFloat},
+    t::Int,
+    active::Vector{<:Int})
 
     for i in 1:t, ii in 1:4
         k = active[i]
@@ -1381,13 +1381,13 @@ end
 
 
 function min_norm_w!(
-    ctrl::Int64,
-    w::Vector{Float64},
-    w_old::Vector{Float64},
-    y::Vector{Float64},
-    τ::Float64,
-    pos_index::Vector{Int64},
-    nb_pos::Int64)
+    ctrl::Int,
+    w::Vector{<:AbstractFloat},
+    w_old::Vector{<:AbstractFloat},
+    y::Vector{<:AbstractFloat},
+    τ::AbstractFloat,
+    pos_index::Vector{<:Int},
+    nb_pos::Int)
 
     w[:] = w_old
     if nb_pos > 0
@@ -1435,13 +1435,13 @@ end
 # Update the penalty constants using the euclidean norm
 
 function euclidean_norm_weight_update(
-    vA::Vector{Float64},
-    cx::Vector{Float64},
-    active::Vector{Int64},
-    t::Int64,
-    μ::Float64,
-    dimA::Int64,
-    previous_w::Vector{Float64},
+    vA::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    active::Vector{<:Int},
+    t::Int,
+    μ::AbstractFloat,
+    dimA::Int,
+    previous_w::Vector{<:AbstractFloat},
     K::Array{Array{Float64,1},1})
 
     # if no active constraints, previous penalty weights are used
@@ -1510,13 +1510,13 @@ end
 # constraints in the current working setb
 
 function max_norm_weight_update!(
-    nrm_Ap::Float64,
-    rmy::Float64,
-    α_w::Float64,
-    δ::Float64,
-    w::Vector{Float64},
-    active::Vector{Int64},
-    t::Int64,
+    nrm_Ap::AbstractFloat,
+    rmy::AbstractFloat,
+    α_w::AbstractFloat,
+    δ::AbstractFloat,
+    w::Vector{<:AbstractFloat},
+    active::Vector{<:Int},
+    t::Int,
     K::Array{Array{Float64,1},1})
     μ = (abs(α_w - 1.0) <= δ ? 0.0 : rmy / nrm_Ap)
     i1 = (active[1] != 0 ? active[1] : 1)
@@ -1550,15 +1550,15 @@ end
 # where ψ(α) is approximalety minimized
 
 function penalty_weight_update(
-    w_old::Vector{Float64},
-    Jp::Vector{Float64},
-    Ap::Vector{Float64},
+    w_old::Vector{<:AbstractFloat},
+    Jp::Vector{<:AbstractFloat},
+    Ap::Vector{<:AbstractFloat},
     K::Array{Array{Float64,1},1},
-    rx::Vector{Float64},
-    cx::Vector{Float64},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
     work_set::WorkingSet,
-    dimA::Int64,
-    norm_code::Int64)
+    dimA::Int,
+    norm_code::Int)
 
     # Data
     δ = 0.25
@@ -1641,15 +1641,15 @@ end
 # CONCAT
 # Compute in place the components of vector v used for polynomial minimization
 
-function concatenate!(v::Vector{Float64},
-    rx::Vector{Float64},
-    cx::Vector{Float64},
-    w::Vector{Float64},
-    m::Int64,
-    t::Int64,
-    l::Int64,
-    active::Vector{Int64},
-    inactive::Vector{Int64})
+function concatenate!(v::Vector{<:AbstractFloat},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    w::Vector{<:AbstractFloat},
+    m::Int,
+    t::Int,
+    l::Int,
+    active::Vector{<:Int},
+    inactive::Vector{<:Int})
 
     v[1:m] = rx[:]
     if t != 0
@@ -1671,20 +1671,20 @@ end
 # Compute in place vectors v0 and v2 so that one dimensional minimization in R^m can be done
 # Also modifies components of v1 related to constraints
 
-function coefficients_linesearch!(v0::Vector{Float64},
-    v1::Vector{Float64},
-    v2::Vector{Float64},
-    α_k::Float64,
-    rx::Vector{Float64},
-    cx::Vector{Float64},
-    rx_new::Vector{Float64},
-    cx_new::Vector{Float64},
-    w::Vector{Float64},
-    m::Int64,
-    t::Int64,
-    l::Int64,
-    active::Vector{Int64},
-    inactive::Vector{Int64})
+function coefficients_linesearch!(v0::Vector{<:AbstractFloat},
+    v1::Vector{<:AbstractFloat},
+    v2::Vector{<:AbstractFloat},
+    α_k::AbstractFloat,
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    rx_new::Vector{<:AbstractFloat},
+    cx_new::Vector{<:AbstractFloat},
+    w::Vector{<:AbstractFloat},
+    m::Int,
+    t::Int,
+    l::Int,
+    active::Vector{<:Int},
+    inactive::Vector{<:Int})
 
     # Compute v0
     concatenate!(v0, rx, cx, w, m, t, l, active, inactive)
@@ -1700,9 +1700,9 @@ end
 
 # Equivalent Fortran : QUAMIN in dblreduns.f
 
-function minimize_quadratic(x1::Float64, y1::Float64,
-    x2::Float64, y2::Float64,
-    x3::Float64, y3::Float64)
+function minimize_quadratic(x1::AbstractFloat, y1::AbstractFloat,
+    x2::AbstractFloat, y2::AbstractFloat,
+    x3::AbstractFloat, y3::AbstractFloat)
 
     d1, d2 = y2 - y1, y3 - y1
     s = (x3 - x1)^2 * d1 - (x2 - x1)^2 * d2
@@ -1714,12 +1714,12 @@ end
 # Equivalent Fortran : MINRN in dblreduns.f
 
 
-function minrn(x1::Float64, y1::Float64,
-    x2::Float64, y2::Float64,
-    x3::Float64, y3::Float64,
-    α_min::Float64,
-    α_max::Float64,
-    p_max::Float64)
+function minrn(x1::AbstractFloat, y1::AbstractFloat,
+    x2::AbstractFloat, y2::AbstractFloat,
+    x3::AbstractFloat, y3::AbstractFloat,
+    α_min::AbstractFloat,
+    α_max::AbstractFloat,
+    p_max::AbstractFloat)
 
     ε = sqrt(eps(Float64)) / p_max
 
@@ -1746,12 +1746,12 @@ end
 
 
 function parameters_rm(
-    v0::Vector{Float64},
-    v1::Vector{Float64},
-    v2::Vector{Float64},
-    x_min::Float64,
-    ds::Polynomial{Float64},
-    dds::Polynomial{Float64})
+    v0::Vector{<:AbstractFloat},
+    v1::Vector{<:AbstractFloat},
+    v2::Vector{<:AbstractFloat},
+    x_min::AbstractFloat,
+    ds::Polynomial{<:AbstractFloat},
+    dds::Polynomial{<:AbstractFloat})
 
     dds_best = dds(x_min)
     η, d = 0.1, 1.0
@@ -1791,17 +1791,17 @@ function parameters_rm(
 
 end
 
-function bounds(α_min::Float64, α_max::Float64, α::Float64, s::Polynomial{Float64})
+function bounds(α_min::AbstractFloat, α_max::AbstractFloat, α::AbstractFloat, s::Polynomial{<:AbstractFloat})
     α = min(α, α_max)
     α = max(α, α_min)
     return α, s(α)
 end
 
 function newton_raphson(
-    x_min::Float64,
-    Dm::Float64,
-    ds::Polynomial{Float64},
-    dds::Polynomial{Float64})
+    x_min::AbstractFloat,
+    Dm::AbstractFloat,
+    ds::Polynomial{<:AbstractFloat},
+    dds::Polynomial{<:AbstractFloat})
 
     α, newton_iter = x_min, 0
     ε, error = 1e-4, 1.0
@@ -1817,13 +1817,13 @@ end
 
 
 # Equivalent Fortran : ONER in dblreduns.f
-function one_root(c::Float64, d::Float64, a::Float64)
+function one_root(c::AbstractFloat, d::AbstractFloat, a::AbstractFloat)
     arg1, arg2 = -c / 2 + sqrt(d), -c / 2 - sqrt(d)
     return cbrt(arg1) + cbrt(arg2) - a / 3
 end
 
 # Equivalent Fortran : TWOR in dblreduns.f
-function two_roots(b::Float64, c::Float64, d::Float64, a::Float64, x_min::Float64)
+function two_roots(b::AbstractFloat, c::AbstractFloat, d::AbstractFloat, a::AbstractFloat, x_min::AbstractFloat)
     φ = acos(abs(c / 2) / (-b / 3)^(3 / 2))
     t = (c <= 0 ? 2 * sqrt(-b / 3) : -2 * sqrt(-b / 3))
 
@@ -1845,12 +1845,12 @@ end
 
 # Equivalent Fortran : MINRM in dblreduns.f
 function minrm(
-    v0::Vector{Float64},
-    v1::Vector{Float64},
-    v2::Vector{Float64},
-    x_min::Float64,
-    α_min::Float64,
-    α_max::Float64)
+    v0::Vector{<:AbstractFloat},
+    v1::Vector{<:AbstractFloat},
+    v2::Vector{<:AbstractFloat},
+    x_min::AbstractFloat,
+    α_min::AbstractFloat,
+    α_max::AbstractFloat)
 
     s = Polynomial([0.5 * dot(v0, v0), dot(v0, v1), dot(v0, v2) + 0.5 * dot(v1, v1), dot(v1, v2), 0.5 * dot(v2, v2)])
     ds = derivative(s)
@@ -1875,11 +1875,11 @@ end
 
 
 function check_reduction(
-    ψ_α::Float64,
-    ψ_k::Float64,
-    approx_k::Float64,
-    η::Float64,
-    diff_psi::Float64)
+    ψ_α::AbstractFloat,
+    ψ_k::AbstractFloat,
+    approx_k::AbstractFloat,
+    η::AbstractFloat,
+    diff_psi::AbstractFloat)
 
     # Data
     δ = 0.2
@@ -1898,22 +1898,22 @@ end
 # or until steplength times search direction is below square root of relative_prevision
 
 function goldstein_armijo_step(
-    ψ0::Float64,
-    dψ0::Float64,
-    α_min::Float64,
-    τ::Float64,
-    p_max::Float64,
-    x::Vector{Float64},
-    α0::Float64,
-    p::Vector{Float64},
+    ψ0::AbstractFloat,
+    dψ0::AbstractFloat,
+    α_min::AbstractFloat,
+    τ::AbstractFloat,
+    p_max::AbstractFloat,
+    x::Vector{<:AbstractFloat},
+    α0::AbstractFloat,
+    p::Vector{<:AbstractFloat},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    w::Vector{Float64},
-    m::Int64,
-    l::Int64,
-    t::Int64,
-    active::Vector{Int64},
-    inactive::Vector{Int64})
+    w::Vector{<:AbstractFloat},
+    m::Int,
+    l::Int,
+    t::Int,
+    active::Vector{<:Int},
+    inactive::Vector{<:Int})
 
     u = α0
     sqr_ε = sqrt(eps(Float64))
@@ -1944,20 +1944,20 @@ end
 
 
 function linesearch_constrained(
-    x::Vector{Float64},
-    α0::Float64,
-    p::Vector{Float64},
+    x::Vector{<:AbstractFloat},
+    α0::AbstractFloat,
+    p::Vector{<:AbstractFloat},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    rx::Vector{Float64},
-    cx::Vector{Float64},
-    JpAp::Vector{Float64},
-    w::Vector{Float64},
+    rx::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    JpAp::Vector{<:AbstractFloat},
+    w::Vector{<:AbstractFloat},
     work_set::WorkingSet,
-    ψ0::Float64,
-    dψ0::Float64,
-    α_low::Float64,
-    α_upp::Float64)
+    ψ0::AbstractFloat,
+    dψ0::AbstractFloat,
+    α_low::AbstractFloat,
+    α_upp::AbstractFloat)
 
 
     # Data
@@ -2144,11 +2144,11 @@ end
 # Determine the upper bound of the steplength
 
 function upper_bound_steplength(
-    A::Matrix{Float64},
-    cx::Vector{Float64},
-    p::Vector{Float64},
+    A::Matrix{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    p::Vector{<:AbstractFloat},
     work_set::WorkingSet,
-    index_del::Int64)
+    index_del::Int)
 
     # Data
     inactive = work_set.inactive
@@ -2194,17 +2194,17 @@ If search direction computed with method of Newton, an undamped step is taken, i
 function compute_steplength(
     iter::Iteration,
     previous_iter::Iteration,
-    x::Vector{Float64},
+    x::Vector{<:AbstractFloat},
     r::ResidualsFunction,
-    rx::Vector{Float64},
-    J::Matrix{Float64},
+    rx::Vector{<:AbstractFloat},
+    J::Matrix{<:AbstractFloat},
     c::ConstraintsFunction,
-    cx::Vector{Float64},
-    A::Matrix{Float64},
+    cx::Vector{<:AbstractFloat},
+    A::Matrix{<:AbstractFloat},
     active_constraint::Constraint,
     work_set::WorkingSet,
     K::Array{Array{Float64,1},1},
-    weight_code::Int64)
+    weight_code::Int)
 
     # Data
     c1 = 1e-3
@@ -2292,17 +2292,17 @@ function compute_steplength(
 end
 
 function check_derivatives(
-    dψ0::Float64,
-    ψ0::Float64,
-    ψ_k::Float64,
-    x_old::Vector{Float64},
-    α::Float64,
-    p::Vector{Float64},
+    dψ0::AbstractFloat,
+    ψ0::AbstractFloat,
+    ψ_k::AbstractFloat,
+    x_old::Vector{<:AbstractFloat},
+    α::AbstractFloat,
+    p::Vector{<:AbstractFloat},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    w::Vector{Float64},
+    w::Vector{<:AbstractFloat},
     work_set::WorkingSet,
-    m::Int64)
+    m::Int)
 
     # Data
     l,t = work_set.l, work_set.t
@@ -2322,7 +2322,7 @@ end
 
 
 
-function evaluation_restart!(iter::Iteration, error_code::Int64)
+function evaluation_restart!(iter::Iteration, error_code::Int)
     iter.restart = (error_code < 0)
 end
 
@@ -2400,20 +2400,20 @@ function check_termination_criteria(
     prev_iter::Iteration,
     W::WorkingSet,
     active_C::Constraint,
-    x::Vector{Float64},
-    cx::Vector{Float64},
-    rx_sum::Float64,
-    ∇fx::Vector{Float64},
-    max_iter::Int64,
-    nb_iter::Int64,
-    ε_abs::Float64,
-    ε_rel::Float64,
-    ε_x::Float64,
-    ε_c::Float64,
-    error_code::Int64,
-    sigmin::Float64,
-    λ_abs_max::Float64,
-    Ψ_error::Int64)
+    x::Vector{<:AbstractFloat},
+    cx::Vector{<:AbstractFloat},
+    rx_sum::AbstractFloat,
+    ∇fx::Vector{<:AbstractFloat},
+    max_iter::Int,
+    nb_iter::Int,
+    ε_abs::AbstractFloat,
+    ε_rel::AbstractFloat,
+    ε_x::AbstractFloat,
+    ε_c::AbstractFloat,
+    error_code::Int,
+    sigmin::AbstractFloat,
+    λ_abs_max::AbstractFloat,
+    Ψ_error::Int)
 
     exit_code = 0
     alfnoi = ε_rel / (norm(iter.p) + ε_abs)
@@ -2506,9 +2506,9 @@ function output!(
     io::IOStream,
     iter::Iteration,
     W::WorkingSet,
-    nb_iter::Int64,
-    rx_sum::Float64,
-    cx_sum::Float64)
+    nb_iter::Int,
+    rx_sum::AbstractFloat,
+    cx_sum::AbstractFloat)
 
     if norm(W.active, Inf) > 0
         s_act = "("
@@ -2527,8 +2527,8 @@ function final_output!(
     io::IOStream,
     iter::Iteration,
     W::WorkingSet,
-    exit_code::Int64,
-    nb_iter::Int64)
+    exit_code::Int,
+    nb_iter::Int)
 
 
     
@@ -2549,9 +2549,9 @@ function output_iter_for_comparison(
     io::IOStream,
     iter::Iteration,
     W::WorkingSet,
-    nb_iter::Int64,
-    cx_sum::Float64,
-    rx_sum::Float64)
+    nb_iter::Int,
+    cx_sum::AbstractFloat,
+    rx_sum::AbstractFloat)
 
     to_string_e = (x -> mimic_fortran_e_format(x, 5))
     @printf(io, "%5d%15s        %13s     %13s%13s%13s\n",
@@ -2565,12 +2565,12 @@ end
 function final_output_for_comparison(
     io::IOStream,
     iter::Iteration,
-    exit_code::Int64,
-    nb_iter::Int64,
+    exit_code::Int,
+    nb_iter::Int,
     residuals::ResidualsFunction,
     constraints::ConstraintsFunction,
-    cx_sum::Float64,
-    solving_time::Float64)
+    cx_sum::AbstractFloat,
+    solving_time::AbstractFloat)
 
     @printf(io, "\nNumber of iterations = %5d", nb_iter)
 
@@ -2685,13 +2685,13 @@ Must be called with the following arguments:
 
 * `c` is a function of type to evaluate constraints values and jacobian
 
-* `n::Int64` is the number of parameters
+* `n::Int` is the number of parameters
 
-* `m::Int64` is the number of residuals 
+* `m::Int` is the number of residuals 
 
-* `q::Int64` is the number of equality constraints 
+* `q::Int` is the number of equality constraints 
 
-* `l::Int64` is the total number of constraints (equalities and inequalities)
+* `l::Int` is the total number of constraints (equalities and inequalities)
 
 The following arguments are optionnal and have default values:
 
@@ -2701,13 +2701,13 @@ The following arguments are optionnal and have default values:
 
     - `false` by default
       
-* `weight_code::Int64` is an int representing the method used to compute penality weights at each iteration
+* `weight_code::Int` is an int representing the method used to compute penality weights at each iteration
 
     - `1` represents maximum norm method
 
     - `2` (default value) represents euclidean norm method
           
-* `MAX_ITER::Int64`
+* `MAX_ITER::Int`
      
     - int defining the maximum number of iterations
 
@@ -2715,7 +2715,7 @@ The following arguments are optionnal and have default values:
 
 * `ε_abs`, `ε_rel`, `ε_x` and `ε_c`
 
-    - small positive scalars of type `Float64` to test convergence
+    - small AsbtractFloat positive scalars 
 
     - default are the recommended one by the authors, i.e. 
 
@@ -2726,11 +2726,11 @@ The following arguments are optionnal and have default values:
 =#
 
 
-function enlsip(x0::Vector{Float64},
+function enlsip(x0::Vector{<:AbstractFloat},
     r::ResidualsFunction, c::ConstraintsFunction,
-    n::Int64, m::Int64, q::Int64, l::Int64;
-    scaling::Bool=false, weight_code::Int64=2, MAX_ITER::Int64=100,
-    ε_abs=1e-10, ε_rel=1e-5, ε_x=1e-3, ε_c=1e-4, ε_rank::Float64=1e-10,
+    n::Int, m::Int, q::Int, l::Int;
+    scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100,
+    ε_abs=1e-10, ε_rel=1e-5, ε_x=1e-3, ε_c=1e-4, ε_rank::AbstractFloat=1e-10,
     verbose::Bool=false,output_file::String="enlsip.out")
     
     function output_header_for_comparison(io)

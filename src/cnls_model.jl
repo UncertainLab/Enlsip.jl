@@ -10,8 +10,8 @@ abstract type EvaluationFunction end
 mutable struct ResidualsFunction <: EvaluationFunction 
     reseval
     jacres_eval
-    nb_reseval::Int64
-    nb_jacres_eval::Int64
+    nb_reseval::Int
+    nb_jacres_eval::Int
 end
 
 
@@ -20,15 +20,15 @@ function ResidualsFunction(eval, jac_eval)
 end
 
 function ResidualsFunction(eval)
-    num_jac_eval(x::Vector) = jac_forward_diff(eval,x)
+    num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
     ResidualsFunction(eval, num_jac_eval,0,0)
 end
 
 mutable struct ConstraintsFunction <: EvaluationFunction 
     conseval
     jaccons_eval
-    nb_conseval::Int64
-    nb_jaccons_eval::Int64
+    nb_conseval::Int
+    nb_jaccons_eval::Int
 end
 
 function ConstraintsFunction(eval, jac_eval)
@@ -36,38 +36,38 @@ function ConstraintsFunction(eval, jac_eval)
 end
 
 function ConstraintsFunction(eval)
-    num_jac_eval(x::Vector) = jac_forward_diff(eval,x)
+    num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
     ConstraintsFunction(eval, num_jac_eval,0,0)
 end
 
 #= Functions to compute in place the residuals, constraints and jacobian matrices of a given EvaluationFunction =#
 
-function res_eval!(r::ResidualsFunction, x::Vector, rx::Vector)
+function res_eval!(r::ResidualsFunction, x::Vector{<:AbstractFloat}, rx::Vector{<:AbstractFloat})
     rx[:] = r.reseval(x)
     r.nb_reseval += 1
     return
 end
 
-function jacres_eval!(r::ResidualsFunction, x::Vector, J::Matrix)
+function jacres_eval!(r::ResidualsFunction, x::Vector{<:AbstractFloat}, J::Matrix)
     J[:] = r.jacres_eval(x)
     r.nb_jacres_eval += 1
     return
 end
 
-function cons_eval!(c::ConstraintsFunction, x::Vector, cx::Vector)
+function cons_eval!(c::ConstraintsFunction, x::Vector{<:AbstractFloat}, cx::Vector{<:AbstractFloat})
     cx[:] = c.conseval(x)
     c.nb_conseval += 1
     return
 end
 
-function jaccons_eval!(c::ConstraintsFunction, x::Vector, A::Matrix)
+function jaccons_eval!(c::ConstraintsFunction, x::Vector{<:AbstractFloat}, A::Matrix)
     A[:] = c.jaccons_eval(x)
     c.nb_jaccons_eval += 1
     return
 end
 
 # Auxialiry funcion to define EvaluationFunction with numerical jacobian
-function jac_forward_diff(h_eval, x::Vector)
+function jac_forward_diff(h_eval, x::Vector{<:AbstractFloat})
 
     δ = sqrt(eps(eltype(x)))
     hx = h_eval(x)
@@ -97,11 +97,11 @@ abstract type AbstractCnlsModel end
 struct CNLSModel <: AbstractCnlsModel
     residuals::ResidualsFunction
     constraints::ConstraintsFunction
-    starting_point::Vector
-    nb_parameters::Int64
-    nb_residuals::Int64
-    nb_eqcons::Int64
-    nb_cons::Int64
+    starting_point::Vector{<:AbstractFloat}
+    nb_parameters::Int
+    nb_residuals::Int
+    nb_eqcons::Int
+    nb_cons::Int
 end
 
 
@@ -143,7 +143,7 @@ mutable struct CnlsModel <: AbstractCnlsModel
     residuals
     nb_parameters::Int
     nb_residuals::Int
-    starting_point::Vector
+    starting_point::Vector{<:AbstractFloat}
     jacobian_residuals
     eq_constraints
     jacobian_eqcons
@@ -151,14 +151,14 @@ mutable struct CnlsModel <: AbstractCnlsModel
     ineq_constraints
     jacobian_ineqcons
     nb_ineqcons::Int
-    x_low::Vector
-    x_upp::Vector
+    x_low::Vector{<:AbstractFloat}
+    x_upp::Vector{<:AbstractFloat}
     status_code::Int
-    sol::Vector
+    sol::Vector{<:AbstractFloat}
     obj_value::Float64
 end
 
-function convert_exit_code(code::Int64)
+function convert_exit_code(code::Int)
     
     status_code = 0
     if code > 0
@@ -247,18 +247,18 @@ Constructor for [`CnlsModel`](@ref).
 """
 function CnlsModel(
     residuals=nothing,
-    nb_parameters::Int64=0,
-    nb_residuals::Int64=0;
-    starting_point::Vector=zeros(Float64, nb_parameters),
+    nb_parameters::Int=0,
+    nb_residuals::Int=0;
+    starting_point::Vector{<:AbstractFloat}=zeros(Float64, nb_parameters),
     jacobian_residuals=nothing,
     eq_constraints=nothing,
     jacobian_eqcons=nothing,
-    nb_eqcons::Int64=0,
+    nb_eqcons::Int=0,
     ineq_constraints=nothing,
     jacobian_ineqcons=nothing,
-    nb_ineqcons::Int64=0,
-    x_low::Vector=fill!(Vector{Float64}(undef,nb_parameters), -Inf),
-    x_upp::Vector=fill!(Vector{Float64}(undef,nb_parameters), Inf))
+    nb_ineqcons::Int=0,
+    x_low::Vector{<:AbstractFloat}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), -Inf),
+    x_upp::Vector{<:AbstractFloat}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), Inf))
     
 
     # Assertion test on residuals
@@ -280,7 +280,7 @@ end
 
 
 
-function box_constraints(x_low::Vector, x_upp::Vector)
+function box_constraints(x_low::Vector{<:AbstractFloat}, x_upp::Vector{<:AbstractFloat})
 
     n = size(x_low,1)
     @assert(n == size(x_upp,1),"Bounds vectors must have same length")
@@ -291,18 +291,18 @@ function box_constraints(x_low::Vector, x_upp::Vector)
     @assert(!(no_x_low && no_x_upp), "Bounds vectors are assumed to contain at least one finite element")
 
     if no_x_low && !no_x_upp
-        cons_w_ubounds(x::Vector) = filter(isfinite,x_upp-x)
-        jaccons_w_ubounds(x::Vector) = Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:]
+        cons_w_ubounds(x::Vector{<:AbstractFloat}) = filter(isfinite,x_upp-x)
+        jaccons_w_ubounds(x::Vector{<:AbstractFloat}) = Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:]
         return cons_w_ubounds, jaccons_w_ubounds
     
     elseif !no_x_low && no_x_upp
-        cons_w_lbounds(x::Vector) = filter(isfinite, x-x_low)
-        jaccons_w_lbounds(x::Vector) = Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:]
+        cons_w_lbounds(x::Vector{<:AbstractFloat}) = filter(isfinite, x-x_low)
+        jaccons_w_lbounds(x::Vector{<:AbstractFloat}) = Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:]
         return cons_w_lbounds, jaccons_w_lbounds
     
     else
-        cons_w_bounds(x::Vector) = vcat(filter(isfinite, x-x_low), filter(isfinite, x_upp-x))
-        jaccons_w_bounds(x::Vector) = vcat(Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:], Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:])
+        cons_w_bounds(x::Vector{<:AbstractFloat}) = vcat(filter(isfinite, x-x_low), filter(isfinite, x_upp-x))
+        jaccons_w_bounds(x::Vector{<:AbstractFloat}) = vcat(Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:], Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:])
         return cons_w_bounds, jaccons_w_bounds
     end
 end
@@ -312,43 +312,43 @@ function instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_
     bounds_func, jac_bounds_func = box_constraints(x_low, x_upp)
 
     if eq_constraints !== nothing && ineq_constraints !== nothing
-        cons(x::Vector) = vcat(eq_constraints(x), ineq_constraints(x), bounds_func(x))
+        cons(x::Vector{<:AbstractFloat}) = vcat(eq_constraints(x), ineq_constraints(x), bounds_func(x))
 
         if jacobian_eqcons !== nothing && jacobian_ineqcons !== nothing
-            jac_cons(x::Vector) = vcat(jacobian_eqcons(x), jacobian_ineqcons(x), jac_bounds_func(x))
+            jac_cons(x::Vector{<:AbstractFloat}) = vcat(jacobian_eqcons(x), jacobian_ineqcons(x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_cons)
 
         elseif jacobian_eqcons !== nothing && jacobian_ineqcons === nothing
-            jac_cons_ineqnum(x::Vector) = vcat(jacobian_eqcons(x), jac_forward_diff(ineq_constraints, x), jac_bounds_func(x))
+            jac_cons_ineqnum(x::Vector{<:AbstractFloat}) = vcat(jacobian_eqcons(x), jac_forward_diff(ineq_constraints, x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_ineqnum)
 
         elseif jacobian_eqcons === nothing && jacobian_ineqcons !== nothing
             jac_cons_eqnum(x) = vcat(jac_forward_diff(eq_constraints,x), jacobian_ineqcons(x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_eqnum)
         else
-            jac_consnum(x::Vector) =  vcat(jac_forward_diff(eq_constraints,x), jac_forward_diff(ineq_constraints, x), jac_bounds_func(x))
+            jac_consnum(x::Vector{<:AbstractFloat}) =  vcat(jac_forward_diff(eq_constraints,x), jac_forward_diff(ineq_constraints, x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_consnum)
         end
 
     elseif eq_constraints !== nothing && ineq_constraints === nothing
-        eq_cons(x::Vector) = vcat(eq_constraints(x), bounds_func(x))
+        eq_cons(x::Vector{<:AbstractFloat}) = vcat(eq_constraints(x), bounds_func(x))
         
         if jacobian_eqcons === nothing
-            jac_eqconsnum(x::Vector) = vcat(jac_forward_diff(eq_constraints,x), jac_bounds_func(x))
+            jac_eqconsnum(x::Vector{<:AbstractFloat}) = vcat(jac_forward_diff(eq_constraints,x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(eq_cons, jac_eqconsnum)
         else
-            jac_eqcons(x::Vector) = vcat(jacobian_eq_cons(x), jac_bounds_func(x))
+            jac_eqcons(x::Vector{<:AbstractFloat}) = vcat(jacobian_eq_cons(x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(eq_cons, jac_eqcons)
         end
 
     elseif eq_constraints === nothing && ineq_constraints !== nothing
-        ineq_cons(x::Vector) = vcat(ineq_constraints(x), bounds_func(x))
+        ineq_cons(x::Vector{<:AbstractFloat}) = vcat(ineq_constraints(x), bounds_func(x))
         
         if jacobian_ineqcons === nothing
-            jac_ineqconsnum(x::Vector) = vcat(jac_forward_diff(ineq_constraints,x), jac_bounds_func(x))
+            jac_ineqconsnum(x::Vector{<:AbstractFloat}) = vcat(jac_forward_diff(ineq_constraints,x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(ineq_cons, jac_ineqconsnum)
         else
-            jac_ineqcons(x::Vector) = vcat(jacobian_ineqcons(x), jac_bounds_func(x))
+            jac_ineqcons(x::Vector{<:AbstractFloat}) = vcat(jacobian_ineqcons(x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(ineq_cons, jac_ineqcons)
         end
     
@@ -361,21 +361,21 @@ end
 function instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq_constraints, jacobian_ineqcons)
 
     if eq_constraints !== nothing && ineq_constraints !== nothing
-        cons(x::Vector) = vcat(eq_constraints(x), ineq_constraints(x))
+        cons(x::Vector{<:AbstractFloat}) = vcat(eq_constraints(x), ineq_constraints(x))
 
         if jacobian_eqcons !== nothing && jacobian_ineqcons !== nothing
-            jac_cons(x::Vector) = vcat(jacobian_eqcons(x), jacobian_ineqcons(x))
+            jac_cons(x::Vector{<:AbstractFloat}) = vcat(jacobian_eqcons(x), jacobian_ineqcons(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_cons)
 
         elseif jacobian_eqcons !== nothing && jacobian_ineqcons === nothing
-            jac_cons_ineqnum(x::Vector) = vcat(jacobian_eqcons(x), jac_forward_diff(ineq_constraints, x))
+            jac_cons_ineqnum(x::Vector{<:AbstractFloat}) = vcat(jacobian_eqcons(x), jac_forward_diff(ineq_constraints, x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_ineqnum)
 
         elseif jacobian_eqcons === nothing && jacobian_ineqcons !== nothing
             jac_cons_eqnum(x) = vcat(jac_forward_diff(eq_constraints,x), jacobian_ineqcons(x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_eqnum)
         else
-            jac_consnum(x::Vector) =  vcat(jac_forward_diff(eq_constraints,x), jac_forward_diff(ineq_constraints, x))
+            jac_consnum(x::Vector{<:AbstractFloat}) =  vcat(jac_forward_diff(eq_constraints,x), jac_forward_diff(ineq_constraints, x))
             constraints_evalfunc = ConstraintsFunction(cons, jac_consnum)
         end
 

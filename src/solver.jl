@@ -26,7 +26,7 @@ The following optionnal arguments can be provided:
 
     - Default value is set to `false`
 """
-function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int64=100, scaling::Bool=false)
+function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int=100, scaling::Bool=false)
 
     # Relative precision
     ε = eps(eltype(model.starting_point))
