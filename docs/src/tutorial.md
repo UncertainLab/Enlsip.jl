@@ -1,11 +1,12 @@
-```@meta 
+# [Usage](@id Usage)
+
+```@meta
 CurrentModule = Enlsip
 ```
 
 ```@setup tutorial
 using Enlsip
 ```
-# [Usage](@id Usage)
 
 This sections provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
 As a reminder from [Home](@ref), problems to solve are of the following form:
@@ -18,9 +19,13 @@ As a reminder from [Home](@ref), problems to solve are of the following form:
 \end{aligned}
 ```
 
+with:
+
+* the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ assumed to be $\mathcal{C}^2$ functions;
+* norm $\|\cdot\|$ denoting the Euclidean norm.
 Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, as shown later in this section, they can be provided as vectors of lower and/or upper bounds, which is more convenient for this type of constraints.
 
-Also, the `Enlsip` solver works with double precision float numbers (i.e. type `Float64`).
+It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
 
 ## Instantiate a model
 
@@ -28,8 +33,7 @@ Solving a problem with Enlsip is organized in two steps.
 
 First, a model of type [`CnlsModel`](@ref) must be instantiated.
 
-
-The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem. 
+The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem.
 
 Although the package enables one to create linear unconstrained least squares, it is recommended to use it to solve nonlinear least squares with general constraints.
 
@@ -39,17 +43,17 @@ The three following positional arguments are mandatory to create a model:
 * `nb_parameters` : number of variables
 * `nb_residuals` : number of residuals
 
-The following keywords arguments are optionnal and deal with constraints and jacobian matrices computations. If the jacobian matrices functions are not provided, they are computed numerically by forward differences within `Enlsip`.
+The following keywords arguments are optional and deal with constraints and Jacobian matrices. If the Jacobian matrices functions are not provided, they are computed numerically by forward differences within the `Enlsip` solver.
 
  Argument             | Details
 :---------------------|:----------------------------------------------
  `starting_point`     | initial solution (can be an infeasbile point)
- `jacobian_residuals` | function computing the jacobian matrix of the residuals
+ `jacobian_residuals` | function computing the Jacobian matrix of the residuals
  `eq_constraints`     | function computing the equality constraints
- `jacobian_eqcons`    | function computing the jacobian matrix of the equality constraints
+ `jacobian_eqcons`    | function computing the Jacobian matrix of the equality constraints
  `nb_eqcons`          | number of equality constraints
  `ineq_constraints`   | function computing the inequality constraints
- `jacobian_ineqcons`  | function computing the jacobian matrix of the inequality constraints
+ `jacobian_ineqcons`  | function computing the Jacobian matrix of the inequality constraints
  `nb_ineqcons`        | number of inequality constraints
  `x_low`              | vector of lower bounds
  `x_upp`              | vector of upper bounds
@@ -75,14 +79,13 @@ Here are some details on how to read and understand the different columns of the
  $\alpha$                      | value of the steplength computed at current iteration
  `reduction`                   | reduction in the objective function performed at curret iteration
 
-
 Once the `Enlsip` solver has been called, one can get additional info about the success, or failure, of the algorithm by calling one of the following functions:
 
  Function                 |
 :-------------------------|
 [`solution`](@ref)        |
 [`status`](@ref)          |
-[`objective_value`](@ref) | 
+[`objective_value`](@ref) |
 
 ```@docs
 Enlsip.solution
@@ -95,7 +98,6 @@ Enlsip.status
 ```@docs
 Enlsip.objective_value
 ```
-
 
 ## [Examples](@id Examples)
 
@@ -127,7 +129,7 @@ nothing # hide
 Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point.
 
 ```@example tutorial
-# Residuals and jacobian matrix associated
+# Residuals and Jacobian matrix associated
 r(x::Vector) = [x[1] - x[2]; (x[1]+x[2]-10.0) / 3.0; x[3]-5.0]
 
 jac_r(x::Vector) = [1. -1. 0;
@@ -137,7 +139,7 @@ jac_r(x::Vector) = [1. -1. 0;
 # Constraints (one equality and box constraints)
 
 c(x::Vector) = [48.0 - x[1]^2-x[2]^2-x[3]^2] # evaluation function for the equality constraint
-jac_c(x::Vector) = [ -2x[1] -2x[2] -2x[3]] # jacobian matrix of the equality constraint
+jac_c(x::Vector) = [ -2x[1] -2x[2] -2x[3]] # Jacobian matrix of the equality constraint
 
 x_l = [-4.5, -4.5, -5.0] # lower bounds
 x_u = [4.5, 4.5, 5.0] # upper bounds
@@ -156,8 +158,8 @@ nb_ineqcons = 1, x_low=x_l, x_upp=x_u, jacobian_residuals=jac_r, jacobian_ineqco
 nothing # hide
 ```
 
-Finally, the `solve!` function can be called on our model. In this example, we set the `silent` optionnal argument to `true` so no output will be printed. See previous [Solving a model](@ref) section for details about what is printed after solving a problem.
-Other optionnal arguments remain to default values.
+Finally, the `solve!` function can be called on our model. In this example, we set the `silent` optional argument to `true` so no output will be printed. See previous [Solving a model](@ref) section for details about what is printed after solving a problem.
+Other optional arguments remain to default values.
 
 ```@example tutorial
 Enlsip.solve!(hs65_model, silent=true)

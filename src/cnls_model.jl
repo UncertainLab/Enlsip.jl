@@ -183,7 +183,17 @@ const dict_status_codes = Dict(
 """
     status(model)
 
-Returns readable information on the solving status of `model`. 
+This functions returns a `Symbol` that gives brief information on the solving status of `model`.
+
+If a model has been instantiated but the solver has not been called yet, it will return `:unsolved`.
+
+Once the solver has been called and if a first order critical point satisfying the convergence criteria has been computed, it will return `:successfully_solved`.
+
+If the algorithm met an abnornakl termination criteria, it will return one of the following:
+
+* `:failed` : the algorithm encoutered a numerical error that triggered termination
+
+* `:maximum_iterations_exceeded` : a solution could not be reached within the maximum number of iterations.
 """
 status(model::CnlsModel) = dict_status_codes[model.status_code]
 
