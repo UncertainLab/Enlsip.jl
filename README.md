@@ -12,14 +12,16 @@ Problems that can be solved using Enlsip are modeled as follows:
 
 ```math
 \begin{aligned}
-\min \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
-\text{s.t.} \quad & c_i(x) = 0, \quad i =1,\ldots,q \\
-& c_j(x) \geq 0, \quad j=q+1,\ldots,\ell, \\
+\min_{x \in \mathbb{R}^n} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
+\text{s.t.} \quad & c_i(x) = 0, \quad i \in \mathcal{E} \\
+& c_i(x) \geq 0, \quad i \in \mathcal{I}, \\
 \end{aligned}
 ```
 
-where $r:\mathbb{R}^n\rightarrow\mathbb{R}^m$, the residuals, and
-$c:\mathbb{R}^n\rightarrow\mathbb{R}^{q+\ell}$, concatenation of the constraints, are $\mathcal{C}^1$ multi-functions.
+where:
+
+* the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ are assumed to be $\mathcal{C}^2$ functions;
+* norm $\|\cdot\|$ denotes the Euclidean norm.
 
 Note that box constraints are modeled as general inequality constraints.
 
