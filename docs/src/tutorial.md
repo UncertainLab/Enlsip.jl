@@ -12,9 +12,9 @@ As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
 \begin{aligned}
-\underset{x}{\min} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
-\text{s.t.} \quad & c_i(x) = 0, \quad i =1,\ldots,q \\
-& c_j(x) \geq 0, \quad j=q+1,\ldots,\ell, \\
+\min_{x \in \mathbb{R}^n} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
+\text{s.t.} \quad & c_i(x) = 0, \quad i \in \mathcal{E} \\
+& c_i(x) \geq 0, \quad i \in \mathcal{I}, \\
 \end{aligned}
 ```
 
@@ -26,7 +26,7 @@ Also, the `Enlsip` solver works with double precision float numbers (i.e. type `
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, a model of type [`CnlsModel`](@ref) must be instantiated. 
+First, a model of type [`CnlsModel`](@ref) must be instantiated.
 
 
 The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem. 
@@ -36,9 +36,7 @@ Although the package enables one to create linear unconstrained least squares, i
 The three following positional arguments are mandatory to create a model:
 
 * `residuals` : function that computes the vector of residuals
-    
 * `nb_parameters` : number of variables
-    
 * `nb_residuals` : number of residuals
 
 The following keywords arguments are optionnal and deal with constraints and jacobian matrices computations. If the jacobian matrices functions are not provided, they are computed numerically by forward differences within `Enlsip`.
@@ -55,8 +53,6 @@ The following keywords arguments are optionnal and deal with constraints and jac
  `nb_ineqcons`        | number of inequality constraints
  `x_low`              | vector of lower bounds
  `x_upp`              | vector of upper bounds
-
-
 
 ## [Solving a model](@id Solving a model)
 
@@ -117,7 +113,6 @@ We show how to implement and solve the following problem:
 ```
 
 First, we provide the dimensions of the problems.
-
 
 ```@example tutorial
 # Dimensions of the problem
