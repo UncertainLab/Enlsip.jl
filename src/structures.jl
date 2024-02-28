@@ -54,27 +54,27 @@ Summarizes the useful informations about an iteration of the algorithm
 
 * `nb_newton_steps` : number of search direction computed using the method of Newton
 =#
-mutable struct Iteration
-    x::Vector{<:AbstractFloat}
-    p::Vector{<:AbstractFloat}
-    rx::Vector{<:AbstractFloat}
-    cx::Vector{<:AbstractFloat}
+mutable struct Iteration{T <: AbstractFloat}
+    x::Vector{T}
+    p::Vector{T}
+    rx::Vector{T}
+    cx::Vector{T}
     t::Int
-    α::AbstractFloat
+    α::T
     index_α_upp::Int
-    λ::Vector{<:AbstractFloat}
-    w::Vector{<:AbstractFloat}
+    λ::Vector{T}
+    w::Vector{T}
     rankA::Int
     rankJ2::Int
     dimA::Int
     dimJ2::Int
-    b_gn::Vector{<:AbstractFloat}
-    d_gn::Vector{<:AbstractFloat}
-    predicted_reduction::AbstractFloat
-    progress::AbstractFloat
-    grad_res::AbstractFloat
-    speed::AbstractFloat
-    β::AbstractFloat
+    b_gn::Vector{T}
+    d_gn::Vector{T}
+    predicted_reduction::T
+    progress::T
+    grad_res::T
+    speed::T
+    β::T
     restart::Bool
     first::Bool
     add::Bool
@@ -87,6 +87,34 @@ end
 
 Base.copy(s::Iteration) = Iteration(s.x, s.p, s.rx, s.cx, s.t, s.α, s.index_α_upp, s.λ, s.w, s.rankA, s.rankJ2, s.dimA, s.dimJ2, s.b_gn, s.d_gn, 
 s.predicted_reduction, s.progress, s.grad_res, s.speed, s.β, s.restart, s.first, s.add, s.del, s.index_del, s.code, s.nb_newton_steps)
+
+
+#=
+    DisplayedInfo{T<:AbstractFloat}
+
+Contains the specific data that summarize an iteration of Enlsip.
+
+* objective : value of the objective function, i.e. sum of squared residuals
+
+* sqr_nrm_act_cons : sum of squared active constraints
+
+* nrm_p : norm of the search direction
+
+* α : value of steplength
+
+* reduction : reduction of the objective function at the end of the iteration
+=#
+struct DisplayedInfo{T<:AbstractFloat}
+    objective::T
+    sqr_nrm_act_cons::T
+    nrm_p::T
+    α::T
+    reduction::T
+end
+
+
+
+
 
 #=
     Constraint
@@ -106,11 +134,11 @@ Fields are the useful informations about active constraints at a point x :
     - The i-th element equals ``\\dfrac{1}{\\|\\nabla c_i(x)\\|}`` for ``i = 1,...,t``, which is the inverse of the length of `A` i-th row 
     - Otherwise, it contains the length of each row in the matrix `A`
 =#
-mutable struct Constraint
-    cx::Vector{<:AbstractFloat}
-    A::Matrix{<:AbstractFloat}
+mutable struct Constraint{T<:AbstractFloat}
+    cx::Vector{T}
+    A::Matrix{T}
     scaling::Bool
-    diag_scale::Vector{<:AbstractFloat}
+    diag_scale::Vector{T}
 end
 
 

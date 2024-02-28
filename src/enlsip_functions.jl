@@ -114,9 +114,9 @@ Finally, the search direction is computed by forming : `p = Q1 * [p1 ; P3*p2]`
 * `d` : vector of size `m`, contains the right handside of the system solved to compute `p2`
 =# 
 function sub_search_direction(
-    J1::Matrix{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    J1::Matrix{T},
+    rx::Vector{T},
+    cx::Vector{T},
     F_A::Factorization,
     F_L11::Factorization,
     F_J2::Factorization,
@@ -125,7 +125,7 @@ function sub_search_direction(
     rankA::Int,
     dimA::Int,
     dimJ2::Int,
-    code::Int)
+    code::Int) where {T<:AbstractFloat}
 
     # Solving without stabilization 
     if code == 1
@@ -2586,7 +2586,7 @@ function final_output_for_comparison(
     @printf(io, "\nNumber of jacobian constraints evaluations : %3d", constraints.nb_jaccons_eval)
     @printf(io, "\n\nSolving time (seconds)                     : %.3f\n", solving_time)
 
-    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully\n\n" : "\nAlgorithm failed\n\n")
+    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully\n\n" : "\nAlgorithm failed to converge\n\n")
     println(io,s_success)
 
 end
