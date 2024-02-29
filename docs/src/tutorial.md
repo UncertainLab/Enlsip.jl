@@ -66,22 +66,20 @@ Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function o
 Enlsip.solve!
 ```
 
-By default, the algorithm will print some details about the iterations performed through during execution.
+Diagnosis of the conduct of the algorithm can be printed by either setting the `silent` keyword argument of the function [`solve!`](@ref) to `false` or by calling [`print_cnls_model`](@ref) after solving. Here are some details on how to read and understand the different columns of the output:
 
-Here are some details on how to read and understand the different columns of the output:
-
- Column                        | Details
+ Column                        | Description
 :------------------------------|:----------------------------------------------
  `iter`                        | iteration number
  `objective`                   | value of the sum of squared residuals (i.e. objective function) at current point
  $\vert\vert$ `active_constraints` $\vert\vert^2$     | value of the sum of squared active constraints at current point
  $\vert\vert$ `p` $\vert\vert$ | norm of the search direction computed at current iteration
  $\alpha$                      | value of the steplength computed at current iteration
- `reduction`                   | reduction in the objective function performed at curret iteration
+ `reduction`                   | reduction in the objective function performed after moving to the next iterate
 
-Once the `Enlsip` solver has been called, one can get additional info about the success, or failure, of the algorithm by calling one of the following functions:
+One can get additional info about termination of the algorithm by calling one of the following functions:
 
- Function                 |
+ Name                     |
 :-------------------------|
 [`solution`](@ref)        |
 [`status`](@ref)          |
@@ -101,13 +99,13 @@ Enlsip.objective_value
 
 ## [Examples](@id Examples)
 
-### Problem 65 from Hock and Schittkowski collection[^1]
+### Problem 65 from Hock and Schittkowski collection[^HS80]
 
 We show how to implement and solve the following problem:
 
 ```math
 \begin{aligned}
-\min \quad & (x_1-x_2)^2 + \dfrac{(x_1+x_2-10)^2}{9}+(x_3-5)^2 \\ 
+\min{x_1, x_2, x_3} \quad & (x_1-x_2)^2 + \dfrac{(x_1+x_2-10)^2}{9}+(x_3-5)^2 \\ 
 \text{s.t.} \quad & 48-x_1^2-x_2^2-x_3^2 \geq 0\\
 & -4.5\leq x_i \leq 4.5, \quad i=1,2\\
 & -5 \leq x_3  \leq 5.
@@ -158,20 +156,25 @@ nb_ineqcons = 1, x_low=x_l, x_upp=x_u, jacobian_residuals=jac_r, jacobian_ineqco
 nothing # hide
 ```
 
-Finally, the `solve!` function can be called on our model. In this example, we set the `silent` optional argument to `true` so no output will be printed. See previous [Solving a model](@ref) section for details about what is printed after solving a problem.
-Other optional arguments remain to default values.
+Finally, the `solve!` function can be called on our model. In this example, keyword arguments remain to default values.
 
 ```@example tutorial
-Enlsip.solve!(hs65_model, silent=true)
+Enlsip.solve!(hs65_model)
 ```
 
-Once `Enlsip` solver has been executed on a problem, one can check if the problem has been successfully solved or not.
+Once `Enlsip` solver has been executed on our problem, a summary of the conduct of the algorithm can be printed by calling [`print_cnls_model`](@ref).
+
+```@example tutorial
+Enlsip.print_cnls_model(hs65_model)
+```
+
+If one just wants to know about termination of the algorithm, calling [`status`](@ref) will tell if the problem has been successfully solved or not.
 
 ```@example tutorial
 Enlsip.status(hs65_model)
 ```
 
-One can also get the optimal solution obtained and value of objective function at that point.
+Then, calling [`solution`](@ref) and [`objective_value`](@ref) will respectively return the optimal solution obtained and the value of objective function at that point.
 
 ```@example tutorial
 hs65_solution = Enlsip.solution(hs65_model)
@@ -181,4 +184,4 @@ hs65_solution = Enlsip.solution(hs65_model)
 hs65_objective = Enlsip.objective_value(hs65_model)
 ```
 
-[^1]: W. Hock and K. Schittkowski. Test Examples for Nonlinear Programming Codes, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.
+[^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

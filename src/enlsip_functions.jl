@@ -2508,31 +2508,35 @@ function print_header(m::Int, n::Int, q::Int, l::Int, scaling::Bool, io::IO=stdo
         println(io, '*'^64)
         println(io, "*",' '^62,"*")
 
-        println(io, "*                          Enlsip 0.9.1                        *")
+        println(io, "*"," "^26,"Enlsip 0.9.1"," "^24,"*")
         println(io, "*",' '^62,"*")
-        println(io, "* Julia version of a Fortran77 solver conceived and developed  *")
-        println(io, "* by Per Lindstrom and Per Ake Wedin from the Institute        *")
-        println(io, "* of Information processing, University of Umea, Sweden.       *")
+        println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
+        println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
+        println(io, "* Per Ake Wedin from the Institute of Information Processing   *")
+        println(io, "* (University of Umea, Sweden).                                *")
         println(io, "*",' '^62,"*")
         println(io, '*'^64)
 
-        println(io, "\n\nNumber of parameters                 : ", @sprintf("%5i", n))
+        println(io, "\nCharacteristics of the model\n\nNumber of parameters                 : ", @sprintf("%5i", n))
         println(io, "Number of residuals                  : ", @sprintf("%5i", m))
         println(io, "Number of equality constraints       : ", @sprintf("%5i", q))
         println(io, "Number of inequality constraints     : ", @sprintf("%5i", (l - q)))
         println(io, "Constraints internal scaling         : $scaling\n")
-        println(io, "\nIteration steps information\n")
-        println(io, "iter     objective    ||active_constraints||²    ||p||        α     reduction")
+end
+
+function print_initialized_model(model::CnlsModel, io::IO=stdout)
+    print_header(model.nb_residuals, model.nb_parameters, model.nb_eqcons, total_nb_constraints(model), model.constraints_scaling, io)
+    println("Model has been initialized.\n\nMethod solve! can be called to execute Enlsip.")
 end
 
 function print_iter(k::Int, iter_data::DisplayedInfo; io::IO=stdout)
-    @printf(io, "%4d   %.7e        %.2e           %.2e   %.2e   %.2e\n", k, iter_data.objective, iter_data.sqr_nrm_act_cons, 
+    @printf(io, "%4d  %.7e       %.2e         %.2e  %.2e  %.3e\n", k, iter_data.objective, iter_data.sqr_nrm_act_cons, 
         iter_data.nrm_p, iter_data.α, iter_data.reduction)
 end
 
 function final_print(model::CnlsModel, exec_info::ExecutionInfo, io::IO=stdout)
 
-    @printf(io, "\nNumber of iterations = %4d", length(exec_info.iterations_detail))
+    @printf(io, "\nNumber of iterations : %4d", length(exec_info.iterations_detail))
 
     @printf(io, "\n\nSquare sum of residuals : %e", objective_value(model)) 
  
@@ -2547,16 +2551,17 @@ end
 function print_diagnosis(model::CnlsModel, io::IO=stdout)
     exec_info = model.model_info
     print_header(model.nb_residuals, model.nb_parameters, model.nb_eqcons, total_nb_constraints(model), model.constraints_scaling, io)
+    println(io, "\nIteration steps information\n")   
+    println(io, "iter    objective   ||active_constraints||²  ||p||       α     reduction")
     for (k, detail_iter_k) in enumerate(exec_info.iterations_detail)
         print_iter(k, detail_iter_k)
     end
     final_print(model, exec_info, io)
 end
 
+
+
 ##### Enlsip solver #####
-
-
-
 
 #=
     enlsip(x0,r,c,n,m,q,l;scaling = false,weight_code = 2,MAX_ITER = 100,ε_abs = 1e-10,ε_rel = 1e-3,ε_x = 1e-3,ε_c = 1e-3)
@@ -2610,9 +2615,6 @@ The following arguments are optionnal and have default values:
         - `ε_rel = 1e-5` 
         - `ε_abs = ε_rank 1e-10`
 =#
-
-
-
 
 function enlsip(x0::Vector{T},
     r::ResidualsFunction, c::ConstraintsFunction,

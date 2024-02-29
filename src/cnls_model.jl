@@ -199,7 +199,7 @@ If a model has been instantiated but the solver has not been called yet, it will
 
 Once the solver has been called and if a first order critical point satisfying the convergence criteria has been computed, it will return `:successfully_solved`.
 
-If the algorithm met an abnornakl termination criteria, it will return one of the following:
+If the algorithm met an abnormall termination criteria, it will return one of the following:
 
 * `:failed` : the algorithm encoutered a numerical error that triggered termination
 

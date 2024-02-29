@@ -4,7 +4,7 @@
 
 Package `Enlsip.jl` is the Julia version of an eponymous Fortran77 library (ENLSIP standing for Easy Nonlinear Least Squares Inequalities Program) designed to solve nonlinear least squares problems under nonlinear constraints.
 
-The optimization method implemented in `Enlsip.jl` was conceived in the early 1980s by two swedish authors named Per Lindström and Per Åke Wedin [^1].
+The optimization method implemented in `Enlsip.jl` was conceived in the early 1980s by two swedish authors named Per Lindström and Per Åke Wedin [^LW88].
 
 It is designed for solve nonlinear least squares problems subject to (s.t.) nonlinear constraints, which can be modeled as the following optimization problem:
 
@@ -79,7 +79,7 @@ Steplength computation is performed by applying a linesearch method on function 
 
 $$\alpha_k \in \arg\min_{\alpha \in [0,1]} \psi_2(x_k+\alpha_kp_k, \mu_k).$$
 
-The authors of the Fortran77 version of ENLSIP developped a linesearch method in which an approximate, but acceptable, minimizer of the merit function is computed[^3].
+The authors of the Fortran77 version of ENLSIP developped a linesearch method in which an approximate, but acceptable, minimizer of the merit function is computed[^LW84].
 
 ### Convergence
 
@@ -91,8 +91,8 @@ As this package is a conversion from Fortran77 to Julia, there might be some bug
 
 Issues can also be opened to discuss about eventual suggestions of improvement.
 
-[^1]: P. Lindström and P.Å. Wedin, *Gauss-Newton based algorithms for constrained nonlinear least squares problems*, Institute of Information processing, University of Umeå Sweden, 1988.
+[^LW88]: P. Lindström and P.Å. Wedin, *Gauss-Newton based algorithms for constrained nonlinear least squares problems*, Institute of Information processing, University of Umeå Sweden, 1988.
 
 [^2]: For more details on the active set strategy implemented in `Enlsip.jl`, see chapters 5 and 6 of *Practical Optimization* (P.E. Gill, W. Murray, M.H. Wright, 1982).
 
-[^3]: P. Lindström and P.Å. Wedin, *A new linesearch algorithm for nonlinear least squares problems*, Mathematical Programming, vol. 29(3), pages 268-296, 1984.
+[^LW84]: P. Lindström and P.Å. Wedin, *A new linesearch algorithm for nonlinear least squares problems*, Mathematical Programming, vol. 29(3), pages 268-296, 1984.
