@@ -86,6 +86,27 @@ function jac_forward_diff(h_eval, x::Vector{<:AbstractFloat})
     return Jh
 end
 
+#=
+    ExecutionInfo
+
+Summarizes information that are given after termination of the algorithm
+
+* iterations_detail: List of `DisplayedInfo`, each element of the list contains the details about a given iteration. The list is stored in chronological order (1st element -> 1st iterration, last element -> last_iteration)
+
+* nb_function_evaluations : number of residuals and constraints evaluations performed during the execution of the algorithm
+
+* nb_jacobian_evaluations : same as above but for Jacobian matrices evaluations
+
+* solving_time : time of execution in seconds
+=#
+struct ExecutionInfo
+    iterations_detail::Vector{DisplayedInfo}
+    nb_function_evaluations::Int
+    nb_jacobian_evaluations::Int
+    solving_time::Float64
+end
+
+ExecutionInfo() = ExecutionInfo([DisplayedInfo()], 0, 0, 0.0)
 """
     AbstractCnlsModel
 
@@ -140,9 +161,11 @@ mutable struct CnlsModel{T} <: AbstractCnlsModel{T}
     nb_ineqcons::Int
     x_low::Vector{T}
     x_upp::Vector{T}
+    constraints_scaling::Bool
     status_code::Int
     sol::Vector{T}
     obj_value::T
+    model_info::ExecutionInfo
 end
 
 function convert_exit_code(code::Int)
@@ -253,6 +276,7 @@ function CnlsModel(
     nb_eqcons::Int=0,
     ineq_constraints=nothing,
     jacobian_ineqcons=nothing,
+    scaling::Bool=false,
     nb_ineqcons::Int=0,
     x_low::Vector{T}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), -Inf),
     x_upp::Vector{T}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), Inf)) where {T}
@@ -269,12 +293,12 @@ function CnlsModel(
 
     rx0 = residuals(starting_point)
     initial_obj_value = dot(rx0,rx0)
+
+    initial_info = ExecutionInfo()
     return CnlsModel(residuals, nb_parameters, nb_residuals, starting_point, jacobian_residuals, 
     eq_constraints, jacobian_eqcons, nb_eqcons, ineq_constraints, jacobian_ineqcons, nb_ineqcons, x_low, x_upp,
-    0, starting_point, initial_obj_value)
+    scaling, 0, starting_point, initial_obj_value, initial_info)
 end
-
-
 
 
 function box_constraints(x_low::Vector{T}, x_upp::Vector{T}) where {T<:AbstractFloat}

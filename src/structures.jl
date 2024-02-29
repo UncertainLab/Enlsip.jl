@@ -118,9 +118,7 @@ struct DisplayedInfo{T} <: AbstractIteration{T}
     reduction::T
 end
 
-
-
-
+ DisplayedInfo() = DisplayedInfo(0.0, 0.0, 0.0, 0.0, 0.0)
 
 #=
     Constraint

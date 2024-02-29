@@ -43,13 +43,16 @@ function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int=100, scaling:
 
     nb_constraints = total_nb_constraints(model)
 
-    # Call ENLSIP-Julia
-    exit_code, x_opt, f_opt = enlsip(model.starting_point, residuals_evalfunc, constraints_evalfunc, model.nb_parameters, model.nb_residuals, model.nb_eqcons, nb_constraints,
-    verbose=!silent, scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
+    # Call the ENLSIP solver
+    exit_code, x_opt, f_opt, enlsip_info = enlsip(model.starting_point, residuals_evalfunc, constraints_evalfunc, model.nb_parameters, model.nb_residuals, model.nb_eqcons, nb_constraints,
+    scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
 
     # Update of solution related fields in model
+    model.model_info = enlsip_info
     model.status_code = convert_exit_code(exit_code)
     model.sol = x_opt
     model.obj_value = f_opt
+
+    !silent && print_diagnosis(model)
     return
 end

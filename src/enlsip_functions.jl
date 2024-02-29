@@ -2499,172 +2499,58 @@ function check_termination_criteria(
     return exit_code
 end
 
-# OUTPUT
-# Print the useful informations at the end of current iteration
+#=
+Functions to print details about execution of the algorithm
+=#
 
-function output!(
-    io::IOStream,
-    iter::Iteration,
-    W::WorkingSet,
-    nb_iter::Int,
-    rx_sum::AbstractFloat,
-    cx_sum::AbstractFloat)
+function print_header(m::Int, n::Int, q::Int, l::Int, scaling::Bool, io::IO=stdout)
+    print(io,"\n\n")
+        println(io, '*'^64)
+        println(io, "*",' '^62,"*")
 
-    if norm(W.active, Inf) > 0
-        s_act = "("
-        # Pour ne pas afficher trop d'indices
-        for i = 1:min(5,W.t)
-            s_act = (i < W.t ? string(s_act, W.active[i], ",") : string(s_act, W.active[i], ")"))
-        end
-    else
-        s_act = " -"
-    end
-    speed = (nb_iter == 0 ? 0.0 : iter.speed) # iter.β / β_prev
-    @printf(io, "  %2d  %e  %.2e  %9.2e   %.3e %3d   %3d   %.2e    %.2e     %.2e    %s\n", nb_iter, rx_sum, cx_sum, iter.progress, norm(iter.p), iter.dimA, iter.dimJ2, iter.α, speed, maximum(iter.w), s_act)
+        println(io, "*                          Enlsip 0.9.1                        *")
+        println(io, "*",' '^62,"*")
+        println(io, "* Julia version of a Fortran77 solver conceived and developed  *")
+        println(io, "* by Per Lindstrom and Per Ake Wedin from the Institute        *")
+        println(io, "* of Information processing, University of Umea, Sweden.       *")
+        println(io, "*",' '^62,"*")
+        println(io, '*'^64)
+
+        println(io, "\n\nNumber of parameters                 : ", @sprintf("%5i", n))
+        println(io, "Number of residuals                  : ", @sprintf("%5i", m))
+        println(io, "Number of equality constraints       : ", @sprintf("%5i", q))
+        println(io, "Number of inequality constraints     : ", @sprintf("%5i", (l - q)))
+        println(io, "Constraints internal scaling         : $scaling\n")
+        println(io, "\nIteration steps information\n")
+        println(io, "iter     objective    ||active_constraints||²    ||p||        α     reduction")
 end
 
-function final_output!(
-    io::IOStream,
-    iter::Iteration,
-    W::WorkingSet,
-    exit_code::Int,
-    nb_iter::Int)
-
-
-    
-    @printf(io, "\nExit code : %d\nNumber of iterations : %d \n\n", exit_code, nb_iter)
-    print(io, "Terminated at point :")
-    (t -> @printf(io, " %e ", t)).(iter.x)
-    print(io, "\n\nActive constraints :")
-    (i -> @printf(io, " %d ", i)).(W.active[1:W.t])
-    println(io, "\nConstraint values : ")
-    (t -> @printf(io, " %.2e ", t)).(iter.cx)
-    println(io, "\nPenalty constants :")
-    (t -> @printf(io, " %.2e ", t)).(iter.w)
-
-    @printf(io, "\n\nSquare sum of residuals = %e\n\n", dot(iter.rx, iter.rx))
+function print_iter(k::Int, iter_data::DisplayedInfo; io::IO=stdout)
+    @printf(io, "%4d   %.7e        %.2e           %.2e   %.2e   %.2e\n", k, iter_data.objective, iter_data.sqr_nrm_act_cons, 
+        iter_data.nrm_p, iter_data.α, iter_data.reduction)
 end
 
-function output_iter_for_comparison(
-    io::IOStream,
-    iter::Iteration,
-    W::WorkingSet,
-    nb_iter::Int,
-    cx_sum::AbstractFloat,
-    rx_sum::AbstractFloat)
+function final_print(model::CnlsModel, exec_info::ExecutionInfo, io::IO=stdout)
 
-    to_string_e = (x -> mimic_fortran_e_format(x, 5))
-    @printf(io, "%5d%15s        %13s     %13s%13s%13s\n",
-        nb_iter, mimic_fortran_e_format(rx_sum, 7),
-        to_string_e(cx_sum), to_string_e(norm(iter.p)),
-        to_string_e(iter.α),
-         to_string_e(iter.progress))
+    @printf(io, "\nNumber of iterations = %4d", length(exec_info.iterations_detail))
 
-end
-
-function final_output_for_comparison(
-    io::IOStream,
-    iter::Iteration,
-    exit_code::Int,
-    nb_iter::Int,
-    residuals::ResidualsFunction,
-    constraints::ConstraintsFunction,
-    cx_sum::AbstractFloat,
-    solving_time::AbstractFloat)
-
-    @printf(io, "\nNumber of iterations = %5d", nb_iter)
-
-    rx2 = dot(iter.rx, iter.rx)
-    @printf(io, "\n\nSquare sum of residuals                 : %s \nSum of squared active constraints value : %s\n",
-        mimic_fortran_e_format(rx2, 6), mimic_fortran_e_format(cx_sum, 6))
+    @printf(io, "\n\nSquare sum of residuals : %e", objective_value(model)) 
  
+    @printf(io, "\n\nNumber of function evaluations       : %4d", exec_info.nb_function_evaluations)
+    @printf(io, "\nNumber of Jacobian matrix valuations : %4d", exec_info.nb_jacobian_evaluations)
 
-    @printf(io, "\n\nNumber of residuals evaluations            : %3d", residuals.nb_reseval)
-    @printf(io, "\nNumber of jacobian residuals evaluations   : %3d", residuals.nb_jacres_eval)
+    @printf(io, "\n\nSolving time (seconds)               : %.3f\n", exec_info.solving_time)
 
-    @printf(io, "\nNumber of constraints evaluations          : %3d", constraints.nb_conseval)
-    @printf(io, "\nNumber of jacobian constraints evaluations : %3d", constraints.nb_jaccons_eval)
-    @printf(io, "\n\nSolving time (seconds)                     : %.3f\n", solving_time)
-
-    s_success = (exit_code > 0 ? "\nAlgorithm terminated successfully\n\n" : "\nAlgorithm failed to converge\n\n")
-    println(io,s_success)
-
+    println(io, "Termination status                   : $(status(model))\n\n")
 end
 
-function mimic_fortran_e_format(num, precision_e=8)
-    str = ""
-    if (isnan(num))
-        str = " NaN" * " "^(precision_e + 3)
-    else
-        str = sprintf1("%" * string(precision_e + 7) * "." * string(precision_e - 1) * "E", num)
-        debut_exposant = findlast("E", str)[1] + 1
-        extra = debut_exposant == precision_e + 4
-        if (tryparse(Int, str[debut_exposant:precision_e+7]) === nothing)
-            println("[mimic_fortran_e_format] bad string to parse: ",
-                "#", str[precision_e+4:precision_e+6], "#  from  #", str, "#",
-                " num: ", num, " precision: ", precision_e)
-            str = "***"
-        else
-            new_exponent = parse(Int, str[debut_exposant:precision_e+7]) + (str[2] == '0' ? 0 : 1)
-            #- il ne faut pas additionner si les chiffres sont tous des zeros -, l'exposant devrait etre zero aussi
-            # en fait il suffit de valider le premier chiffre, il devrait etre non nul.
-            extraexp = new_exponent >= 99 || new_exponent < -99
-            suffix = extra ? @sprintf("E%+04i", new_exponent) : @sprintf("E%+03i", new_exponent)
-            str2 = str[2-extra:2-extra] * "0." * str[3-extra:3-extra] * str[5-extra:precision_e+3-extra-extraexp] * suffix
-            str = str2
-        end
+function print_diagnosis(model::CnlsModel, io::IO=stdout)
+    exec_info = model.model_info
+    print_header(model.nb_residuals, model.nb_parameters, model.nb_eqcons, total_nb_constraints(model), model.constraints_scaling, io)
+    for (k, detail_iter_k) in enumerate(exec_info.iterations_detail)
+        print_iter(k, detail_iter_k)
     end
-    return str
-end
-
-
-function print_tabulated_format(
-    io::IOStream,
-    data;
-    formater=(x -> string(x)),
-    header="",
-    line_prefix="",
-    separator="",
-    trailer="",
-    nb_columns=1,
-    characters_per_line=25000)
-
-    nb_elements = length(data)
-    len_separator = length(separator)
-    index = 0
-    column = 0
-    characters = 0
-    print(io, header)
-    while (index < nb_elements)
-        column += 1
-        index += 1
-        if (index == nb_elements)
-            len_separator = 0
-        end
-        str = formater(data[index])
-        if (str === nothing)
-            println("[print_tabulated_format] formater returned nothing.",
-                " data: ", data[index], " formater: ", formater)
-        end
-        if ((column > nb_columns) |
-            (characters + length(str) + len_separator > characters_per_line))
-            println(io, "")
-            print(io, line_prefix)
-            characters = length(line_prefix)
-            column = 1
-        end
-        print(io, str)
-        characters += length(str)
-        if (index < nb_elements)
-            print(io, separator)
-            characters += len_separator
-        end
-    end
-    if (characters + length(trailer) > characters_per_line)
-        println(io, "")
-        print(io, line_prefix)
-    end
-    println(io, trailer)
+    final_print(model, exec_info, io)
 end
 
 ##### Enlsip solver #####
@@ -2726,39 +2612,16 @@ The following arguments are optionnal and have default values:
 =#
 
 
-function enlsip(x0::Vector{<:AbstractFloat},
+
+
+function enlsip(x0::Vector{T},
     r::ResidualsFunction, c::ConstraintsFunction,
     n::Int, m::Int, q::Int, l::Int;
     scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100,
-    ε_abs=1e-10, ε_rel=1e-5, ε_x=1e-3, ε_c=1e-4, ε_rank::AbstractFloat=1e-10,
-    verbose::Bool=false,output_file::String="enlsip.out")
+    ε_abs::T=T(1e-10), ε_rel::T=T(1e-5), ε_x::T=T(1e-3), ε_c::T=T(1e-4), ε_rank::T=T(1e-10),
+    ) where {T}
     
-    function output_header_for_comparison(io)
-        print(io,"\n\n")
-        println(io, '*'^64)
-        println(io, "*",' '^62,"*")
-
-        println(io, "*                          Enlsip 0.9.1                        *")
-        println(io, "*",' '^62,"*")
-        println(io, "* Julia version of a Fortran77 solver conceived and developed  *")
-        println(io, "* by Per Lindstrom and Per Ake Wedin from the Institute        *")
-        println(io, "* of Information processing, University of Umea, Sweden.       *")
-        println(io, "*",' '^62,"*")
-        println(io, '*'^64)
-
-        println(io, "\n\nNumber of parameters                 : ", @sprintf("%5i", n))
-        println(io, "Number of residuals                  : ", @sprintf("%5i", m))
-        println(io, "Number of equality constraints       : ", @sprintf("%5i", q))
-        println(io, "Number of inequality constraints     : ", @sprintf("%5i", (l - q)))
-        println(io, "Constraints internal scaling         : $scaling\n")
-        println(io, "\nIteration steps information\n")
-        println(io, "iter     objective      ||active_constraints||²    ||p||          α        reduction")
-    end
-    
-
-    io = open(output_file, "w")
-
-    verbose && output_header_for_comparison(io)
+    enlsip_info = ExecutionInfo()
 
     start_time = time()
     nb_iteration = 0    
@@ -2821,14 +2684,22 @@ function enlsip(x0::Vector{<:AbstractFloat},
     exit_code = check_termination_criteria(first_iter, previous_iter, working_set, active_C, x, cx, rx_sum,
         ∇fx, MAX_ITER, nb_iteration, ε_abs, ε_rel, ε_x, ε_c, error_code, sigmin, λ_abs_max, Ψ_error)
 
-    # Print collected informations about the first iteration
-    verbose && output_iter_for_comparison(io, first_iter, working_set, nb_iteration, active_cx_sum, f_opt)
+    # Initialization of the list of collected information to be printed
+    list_iter_detail = Vector{DisplayedInfo}(undef, 0)
+    first_iter_detail = DisplayedInfo(f_opt, active_cx_sum, norm(first_iter.p), first_iter.α, first_iter.progress)
+    push!(list_iter_detail, first_iter_detail)
 
     # Check for violated constraints and add it to the working set
     first_iter.add = evaluate_violated_constraints(cx, working_set, first_iter.index_α_upp)
 
     active_C.cx = cx[working_set.active[1:working_set.t]]
     active_C.A = A[working_set.active[1:working_set.t], :]
+
+
+    #= Rearrangement of iterations data storage
+    The iteration that just terminated is stored as previous iteration 
+    The current `iter` can be used for the next iteration
+    =#
 
     previous_iter = copy(first_iter)
     first_iter.x = x
@@ -2842,8 +2713,6 @@ function enlsip(x0::Vector{<:AbstractFloat},
     iter.del = false
 
     # Main loop for next iterations
-
-
 
     while exit_code == 0
 
@@ -2882,8 +2751,10 @@ function enlsip(x0::Vector{<:AbstractFloat},
         # Another step is required
         if (exit_code == 0)
             # Print collected informations about current iteration
-           verbose &&  output_iter_for_comparison(io, iter, working_set, nb_iteration, active_cx_sum, f_opt)
-
+            # Push current iteration data to the list of collected information to be printed
+            current_iter_detail = DisplayedInfo(f_opt, active_cx_sum, norm(iter.p), iter.α, iter.progress)
+            push!(list_iter_detail, current_iter_detail)
+         
             # Check for violated constraints and add it to the working set
 
             iter.add = evaluate_violated_constraints(cx, working_set, iter.index_α_upp)
@@ -2901,20 +2772,17 @@ function enlsip(x0::Vector{<:AbstractFloat},
             iter.add = false
             f_opt = dot(rx, rx)
 
-            
-
         else
             # Algorithm has terminated
             x_opt = x
             f_opt = dot(rx,rx)
+
+            # Execution information stored in a `ExecutionInfo` data structure
             solving_time = time() - start_time
-            verbose && final_output_for_comparison(io, iter, exit_code, nb_iteration, r, c, active_cx_sum, solving_time)
+            func_ev = r.nb_reseval + c.nb_conseval
+            jac_ev = r.nb_jacres_eval + c.nb_jaccons_eval
+            enlsip_info = ExecutionInfo(list_iter_detail, func_ev, jac_ev, solving_time)
         end
     end
-
-    # Close the IO Stream and print collected informations into an output file
-    close(io)
-    verbose && (s -> println(s)).(readlines(output_file))
-    rm(output_file)
-    return exit_code, x_opt, f_opt
+    return exit_code, x_opt, f_opt, enlsip_info
 end
