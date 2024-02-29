@@ -546,7 +546,7 @@ function minmax_lagrangian_mult(
     q,t = working_set.q, working_set.t
     scaling = active_C.scaling
     diag_scale = active_C.diag_scale
-    sq_rel = sqrt(eps(Float64))
+    sq_rel = sqrt(eps(eltype(λ)))
     λ_abs_max = 0.0
     sigmin = 1e6
 
@@ -575,17 +575,16 @@ function check_constraint_deletion(
     q::Int,
     A::Matrix{<:AbstractFloat},
     λ::Vector{<:AbstractFloat},
-    ∇fx::Vector{<:AbstractFloat},
     scaling::Bool,
     diag_scale::Vector{<:AbstractFloat},
     grad_res::AbstractFloat)
 
       
-    (t, n) = size(A)
+    t = size(A, 1)
     δ = 10.0
     τ = 0.5
     λ_max = (isempty(λ) ? 1.0 : maximum(map(t -> abs(t), λ)))
-    sq_rel = sqrt(eps(Float64)) * λ_max
+    sq_rel = sqrt(eps(eltype(λ))) * λ_max
     s = 0
     
     if t > q
@@ -613,7 +612,7 @@ function evaluate_violated_constraints(
     index_α_upp::Int)
 
     # Data
-    ε = sqrt(eps(Float64))
+    ε = sqrt(eps(eltype(cx)))
     δ = 0.1
     added = false
     if W.l > W.t
@@ -720,7 +719,7 @@ function update_working_set(
     F_A = qr(C.A', ColumnNorm())
     
     first_lagrange_mult_estimate!(C.A, λ, ∇fx, C.cx, C.scaling, C.diag_scale, F_A, iter_k, ε_rank)
-    s = check_constraint_deletion(W.q, C.A, λ, ∇fx, C.scaling, C.diag_scale, iter_k.grad_res)
+    s = check_constraint_deletion(W.q, C.A, λ, C.scaling, C.diag_scale, iter_k.grad_res)
     (m, n) = size(J)
     # Constraint number s is deleted from the current working set
     if s != 0
@@ -733,7 +732,7 @@ function update_working_set(
         deleteat!(λ, s)
         deleteat!(C.cx, s)
         deleteat!(C.diag_scale, s)
-        delete_constraint!(W, s)
+        remove_constraint!(W, s)
         iter_k.del = true
         iter_k.index_del = index_s
         C.A = C.A[setdiff(1:end, s), :]
@@ -764,13 +763,13 @@ function update_working_set(
 
             if !(W.t != rankA || iter_k.rankJ2 != min(m, n - rankA))
                 second_lagrange_mult_estimate!(J, F_A, λ, rx, p_gn, W.t, C.scaling, C.diag_scale)
-                s2 = check_constraint_deletion(W.q, C.A, λ, ∇fx, C.scaling, C.diag_scale, 0.0)
+                s2 = check_constraint_deletion(W.q, C.A, λ, C.scaling, C.diag_scale, 0.0)
                 if s2 != 0
                     index_s2 = W.active[s2]
                     deleteat!(λ, s2)
                     deleteat!(C.diag_scale, s2)
                     C.cx = C.cx[setdiff(1:end, s2)]
-                    delete_constraint!(W, s2)
+                    remove_constraint!(W, s2)
                     iter_k.del = true
                     iter_k.index_del = index_s2
                     C.A = C.A[setdiff(1:end, s2), :]
@@ -792,13 +791,13 @@ function update_working_set(
 
         if !(W.t != rankA || iter_k.rankJ2 != min(m, n - rankA))
             second_lagrange_mult_estimate!(J, F_A, λ, rx, p_gn, W.t, C.scaling, C.diag_scale)
-            s2 = check_constraint_deletion(W.q, C.A, λ, ∇fx, C.scaling, C.diag_scale, 0.0)
+            s2 = check_constraint_deletion(W.q, C.A, λ, C.scaling, C.diag_scale, 0.0)
             if s2 != 0
                 index_s2 = W.active[s2]
                 deleteat!(λ, s2)
                 deleteat!(C.diag_scale, s2)
                 C.cx = C.cx[setdiff(1:end, s2)]
-                delete_constraint!(W, s2)
+                remove_constraint!(W, s2)
                 iter_k.del = true
                 iter_k.index_del = index_s2
                 vect_P1 = F_A.p[:]
@@ -846,7 +845,7 @@ Then, initialize the penalty constants.
 function init_working_set(cx::Vector{<:AbstractFloat}, K::Array{Array{Float64,1},1}, 
     step::Iteration, q::Int, l::Int)
 
-    δ, ϵ, ε_rel = 0.1, 0.01, sqrt(eps(Float64))
+    δ, ϵ, ε_rel = 0.1, 0.01, sqrt(eps(eltype(cx)))
 
     # Initialisation des pénalités
     K[:] = [δ * ones(l) for i = 1:length(K)]
@@ -983,7 +982,7 @@ function check_gn_direction(
     # Data
     δ = 1e-1
     c1, c2, c3, c4, c5 = 0.5, 0.1, 4.0, 10.0, 0.05
-    ε_rel = eps(Float64)
+    ε_rel = eps(eltype(λ))
     β_k = sqrt(d1nrm^2 + b1nrm^2)
 
     method_code = 1
@@ -1016,7 +1015,7 @@ function check_gn_direction(
 
         to_reduce = false
         if W.q < W.t
-            sqr_ε = sqrt(eps(Float64))
+            sqr_ε = sqrt(eps(eltype(λ)))
             rows = zeros(W.t - W.q)
             for i = W.q+1:W.t
                 rows[i-W.q] = (scaling ? 1.0 / diag_scale[i] : diag_scale[i])
@@ -1401,9 +1400,10 @@ function min_norm_w!(
         s = 0.0
         n_runch = nb_pos
         terminated = false
+        ε_rel = eps(eltype(y))
         while !terminated
             τ_new -= s
-            c = (norm(y, Inf) <= eps(Float64) ? 1.0 : τ_new / y_sum)
+            c = (norm(y, Inf) <= ε_rel ? 1.0 : τ_new / y_sum)
             y_sum, s = 0.0, 0.0
             i_stop = n_runch
             k = 1
@@ -1605,7 +1605,7 @@ function penalty_weight_update(
     BtwA *= nrm_Ap * nrm_cx
 
     α_w = 1.0
-    if abs(AtwA + nrm_Jp^2) > eps(Float64)
+    if abs(AtwA + nrm_Jp^2) > eps(eltype(rx))
         α_w = (-BtwA - Jp_rx) / (AtwA + nrm_Jp^2)
     end
 
@@ -1721,7 +1721,7 @@ function minrn(x1::AbstractFloat, y1::AbstractFloat,
     α_max::AbstractFloat,
     p_max::AbstractFloat)
 
-    ε = sqrt(eps(Float64)) / p_max
+    ε = sqrt(eps(typeof(p_max))) / p_max
 
     # α not computable
     # Add an error in this case
@@ -1916,7 +1916,7 @@ function goldstein_armijo_step(
     inactive::Vector{<:Int})
 
     u = α0
-    sqr_ε = sqrt(eps(Float64))
+    sqr_ε = sqrt(eps(typeof(u)))
     exit = (p_max * u < sqr_ε) || (u <= α_min)
     ψu = psi(x, u, p, r, c, w, m, l, t, active, inactive)
     while !exit && (ψu > ψ0 + τ * u * dψ0)

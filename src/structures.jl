@@ -215,7 +215,7 @@ end
 # Equivalent Fortran : DELETE in dblreduns.f
 # Moves the active constraint number s to the inactive set
 
-function delete_constraint!(W::WorkingSet, s::Int)
+function remove_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
 
