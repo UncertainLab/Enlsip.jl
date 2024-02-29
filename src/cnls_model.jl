@@ -42,7 +42,7 @@ end
 
 #= Functions to compute in place the residuals, constraints and jacobian matrices of a given EvaluationFunction =#
 
-function res_eval!(r::ResidualsFunction, x::Vector{<:AbstractFloat}, rx::Vector{<:AbstractFloat})
+function res_eval!(r::ResidualsFunction, x::Vector{T}, rx::Vector{T}) where {T<:AbstractFloat}
     rx[:] = r.reseval(x)
     r.nb_reseval += 1
     return
@@ -54,7 +54,7 @@ function jacres_eval!(r::ResidualsFunction, x::Vector{<:AbstractFloat}, J::Matri
     return
 end
 
-function cons_eval!(c::ConstraintsFunction, x::Vector{<:AbstractFloat}, cx::Vector{<:AbstractFloat})
+function cons_eval!(c::ConstraintsFunction, x::Vector{T}, cx::Vector{T}) where {T<:AbstractFloat}
     cx[:] = c.conseval(x)
     c.nb_conseval += 1
     return
@@ -91,20 +91,7 @@ end
 
 Abstract type for [`CnlsModel`](@ref) structure.
 """
-abstract type AbstractCnlsModel end
-
-
-struct CNLSModel <: AbstractCnlsModel
-    residuals::ResidualsFunction
-    constraints::ConstraintsFunction
-    starting_point::Vector{<:AbstractFloat}
-    nb_parameters::Int
-    nb_residuals::Int
-    nb_eqcons::Int
-    nb_cons::Int
-end
-
-
+abstract type AbstractCnlsModel{T<:AbstractFloat} end
 
 """
     CnlsModel
@@ -139,11 +126,11 @@ This structure contains the following attributes:
 
     * `status_code` : integer indicating the solving status of the model.
 """
-mutable struct CnlsModel <: AbstractCnlsModel
+mutable struct CnlsModel{T} <: AbstractCnlsModel{T}
     residuals
     nb_parameters::Int
     nb_residuals::Int
-    starting_point::Vector{<:AbstractFloat}
+    starting_point::Vector{T}
     jacobian_residuals
     eq_constraints
     jacobian_eqcons
@@ -151,11 +138,11 @@ mutable struct CnlsModel <: AbstractCnlsModel
     ineq_constraints
     jacobian_ineqcons
     nb_ineqcons::Int
-    x_low::Vector{<:AbstractFloat}
-    x_upp::Vector{<:AbstractFloat}
+    x_low::Vector{T}
+    x_upp::Vector{T}
     status_code::Int
-    sol::Vector{<:AbstractFloat}
-    obj_value::Float64
+    sol::Vector{T}
+    obj_value::T
 end
 
 function convert_exit_code(code::Int)
@@ -259,7 +246,7 @@ function CnlsModel(
     residuals=nothing,
     nb_parameters::Int=0,
     nb_residuals::Int=0;
-    starting_point::Vector{<:AbstractFloat}=zeros(Float64, nb_parameters),
+    starting_point::Vector{T}=zeros(nb_parameters),
     jacobian_residuals=nothing,
     eq_constraints=nothing,
     jacobian_eqcons=nothing,
@@ -267,12 +254,12 @@ function CnlsModel(
     ineq_constraints=nothing,
     jacobian_ineqcons=nothing,
     nb_ineqcons::Int=0,
-    x_low::Vector{<:AbstractFloat}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), -Inf),
-    x_upp::Vector{<:AbstractFloat}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), Inf))
+    x_low::Vector{T}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), -Inf),
+    x_upp::Vector{T}=fill!(Vector{eltype(starting_point)}(undef,nb_parameters), Inf)) where {T}
     
 
     # Assertion test on residuals
-    @assert(typeof(residuals) <: Function, "The residuals argument must be a function")
+    @assert(typeof(residuals) <: Function, "A function evaluating residuals must be provided")
     @assert(nb_parameters > 0 && nb_residuals > 0, "The number of parameters and number of residuals must be strictly positive")
     
     # Assertion tests on constraints
@@ -290,7 +277,7 @@ end
 
 
 
-function box_constraints(x_low::Vector{<:AbstractFloat}, x_upp::Vector{<:AbstractFloat})
+function box_constraints(x_low::Vector{T}, x_upp::Vector{T}) where {T<:AbstractFloat}
 
     n = size(x_low,1)
     @assert(n == size(x_upp,1),"Bounds vectors must have same length")

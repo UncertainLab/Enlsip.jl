@@ -1,10 +1,16 @@
+#=
+    AbstractIteration{T<:AbstractFloat} 
 
+Abstract type for later types defined to store data about an iteration of the Enlsip algorithm
+=#
+
+abstract type AbstractIteration{T<:AbstractFloat} end
 
 #=
 
-    Iteration
+    Iteration{T} <: AbstractIteration
 
-Summarizes the useful informations about an iteration of the algorithm
+Summarizes the useful informations about an iteration of the Enlsip algorithm
 
 * `x` : Departure point of the iteration 
 
@@ -54,7 +60,7 @@ Summarizes the useful informations about an iteration of the algorithm
 
 * `nb_newton_steps` : number of search direction computed using the method of Newton
 =#
-mutable struct Iteration{T <: AbstractFloat}
+mutable struct Iteration{T} <: AbstractIteration{T}
     x::Vector{T}
     p::Vector{T}
     rx::Vector{T}
@@ -90,9 +96,9 @@ s.predicted_reduction, s.progress, s.grad_res, s.speed, s.β, s.restart, s.first
 
 
 #=
-    DisplayedInfo{T<:AbstractFloat}
+    DisplayedInfo{T}
 
-Contains the specific data that summarize an iteration of Enlsip.
+Contains the specific data on an iteration of Enlsip that are to be displayed in the execution details
 
 * objective : value of the objective function, i.e. sum of squared residuals
 
@@ -104,7 +110,7 @@ Contains the specific data that summarize an iteration of Enlsip.
 
 * reduction : reduction of the objective function at the end of the iteration
 =#
-struct DisplayedInfo{T<:AbstractFloat}
+struct DisplayedInfo{T} <: AbstractIteration{T}
     objective::T
     sqr_nrm_act_cons::T
     nrm_p::T
