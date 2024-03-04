@@ -14,7 +14,7 @@ Parameters :
     the number of rows of matrix `T`.
 =#
 
-function pseudo_rank(diag_T::Vector{<:AbstractFloat}, ε_rank::AbstractFloat)
+function pseudo_rank(diag_T::Vector{T}, ε_rank::T) where {T}
 
     if isempty(diag_T) || abs(diag_T[1]) < ε_rank
         pseudo_rank = 0
@@ -32,13 +32,13 @@ end
 
 
 function new_point!(
-    x::Vector,
+    x::Vector{T},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    rx::Vector,
-    cx::Vector,
-    J::Matrix,
-    A::Matrix)
+    rx::Vector{T},
+    cx::Vector{T},
+    J::Matrix{T},
+    A::Matrix{T}) where {T}
 
     # Evaluate residuals and associated jacobian matrix
     res_eval!(r,x,rx)
@@ -125,7 +125,7 @@ function sub_search_direction(
     rankA::Int,
     dimA::Int,
     dimJ2::Int,
-    code::Int) where {T<:AbstractFloat}
+    code::Int) where {T}
 
     # Solving without stabilization 
     if code == 1
@@ -134,18 +134,18 @@ function sub_search_direction(
         d_temp = -J1 * p1 - rx
         d = F_J2.Q' * d_temp
         δp2 = UpperTriangular(F_J2.R[1:dimJ2, 1:dimJ2]) \ d[1:dimJ2]
-        p2 = [δp2; zeros(n - t - dimJ2)][invperm(F_J2.p)]
+        p2 = [δp2; zeros(T, n - t - dimJ2)][invperm(F_J2.p)]
 
     # Solving with stabilization
     elseif code == -1
         b_buff = -cx[F_A.p]
         b = F_L11.Q' * b_buff
         δp1 = UpperTriangular(F_L11.R[1:dimA, 1:dimA]) \ b[1:dimA]
-        p1 = F_L11.P[1:rankA, 1:rankA] * [δp1; zeros(rankA - dimA)]
+        p1 = ([δp1; zeros(t - dimA)][invperm(F_L11.p)])[1:rankA]
         d_temp = -J1 * p1 - rx
         d = F_J2.Q' * d_temp
         δp2 = UpperTriangular(F_J2.R[1:dimJ2, 1:dimJ2]) \ d[1:dimJ2]
-        p2 = [δp2; zeros(n - rankA - dimJ2)][invperm(F_J2.p)]
+        p2 = [δp2; zeros(T, n - rankA - dimJ2)][invperm(F_J2.p)]
     end
 
     p = F_A.Q * [p1; p2]
@@ -204,18 +204,18 @@ If `rankA = t`, the first system is solved, otherwise, the second one is solved.
 * `F_J2` : QR decomposition of Matrix `J2` defined in [`sub_search_direction`](@ref)
 =#
 function gn_search_direction(
-    J::Matrix{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    J::Matrix{T},
+    rx::Vector{T},
+    cx::Vector{T},
     F_A::Factorization,
     F_L11::Factorization,
     rankA::Int,
     t::Int,
-    ε_rank::AbstractFloat,
-    current_iter::Iteration)
+    ε_rank::T,
+    current_iter::Iteration) where {T}
 
     code = (rankA == t ? 1 : -1)
-    (m, n) = size(J)
+    n = size(J,2)
     JQ1 = J * F_A.Q
     J1, J2 = JQ1[:, 1:rankA], JQ1[:, rankA+1:end]
     
@@ -242,24 +242,21 @@ end
 
 function hessian_res!(
     r::ResidualsFunction,
-    x::Vector{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
+    x::Vector{T},
+    rx::Vector{T},
     n::Int,
     m::Int,
-    B::Matrix{<:AbstractFloat})
+    B::Matrix{T}) where {T}
 
-    # Only residuals evaluation
-    r.ctrl = 1
-    dummy = zeros(1, 1)
     # Data
-    ε1 = eps(eltype(x))^(1.0 / 3.0)
+    ε1 = eps(T)^(1.0 / 3.0)
     for k in 1:n, j in 1:k
         ε_k = max(abs(x[k]), 1.0) * ε1
         ε_j = max(abs(x[j]), 1.0) * ε1
         e_k = [i == k for i = 1:n]
         e_j = [i == j for i = 1:n]
 
-        f1, f2, f3, f4 = zeros(m), zeros(m), zeros(m), zeros(m)
+        f1, f2, f3, f4 = zeros(T,m), zeros(T,m), zeros(T,m), zeros(T,m)
         res_eval!(r,x + ε_j * e_j + ε_k * e_k, f1)
         res_eval!(r,x - ε_j * e_j + ε_k * e_k, f2)
         res_eval(r,x + ε_j * e_j - ε_k * e_k,f3)
@@ -287,19 +284,16 @@ end
 
 function hessian_cons!(
     c::ConstraintsFunction,
-    x::Vector{<:AbstractFloat},
-    λ::Vector{<:AbstractFloat},
-    active::Vector{<:Int},
+    x::Vector{T},
+    λ::Vector{T},
+    active::Vector{Int},
     n::Int,
     l::Int,
     t::Int,
-    B::Matrix{<:AbstractFloat})
+    B::Matrix{T}) where {T}
 
-    # Only constraints evaluation
-    c.ctrl = 1
-    dummy = zeros(1, 1)
     # Data
-    ε1 = eps(eltype(x))^(1 / 3)
+    ε1 = eps(T)^(1 / 3)
     active_indices = @view active[1:t]
 
     for k in 1:n, j in 1:k
@@ -308,7 +302,7 @@ function hessian_cons!(
         e_k = [i == k for i = 1:n]
         e_j = [i == j for i = 1:n]
 
-        f1, f2, f3, f4 = zeros(l), zeros(l), zeros(l), zeros(l)
+        f1, f2, f3, f4 = zeros(T,l), zeros(T,l), zeros(T,l), zeros(T,l)
         cons_eval!(c,x + ε_j * e_j + ε_k * e_k, f1)
         cons_eval!(c,x - ε_j * e_j + ε_k * e_k, f2)
         cons_eval!(c,x + ε_j * e_j - ε_k * e_k, f3)
@@ -348,17 +342,17 @@ end
 
 
 function newton_search_direction(
-    x::Vector{<:AbstractFloat},
+    x::Vector{T},
     c::ConstraintsFunction,
     r::ResidualsFunction,
-    active_cx::Vector{<:AbstractFloat},
+    active_cx::Vector{T},
     working_set::WorkingSet,
-    λ::Vector{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
-    J::Matrix{<:AbstractFloat},
+    λ::Vector{T},
+    rx::Vector{T},
+    J::Matrix{T},
     F_A::Factorization,
     F_L11::Factorization,
-    rankA::Int)
+    rankA::Int) where {T}
 
 
     error = false
@@ -387,7 +381,7 @@ function newton_search_direction(
     J1, J2 = JQ1[:, 1:rankA], JQ1[:, rankA+1:end]
 
     # Computation of hessian matrices
-    r_mat, c_mat = zeros(n, n), zeros(n, n)
+    r_mat, c_mat = zeros(T, n, n), zeros(T, n, n)
 
     hessian_res!(r, x, rx, n, m, r_mat)
     hessian_cons!(c, x, λ, active, n, l, t, c_mat)
@@ -461,19 +455,19 @@ Then, computes estimates of lagrage multipliers by forming :
 Modifies in place the vector `λ` with the first order estimate of Lagrange multipliers.
 =#
 function first_lagrange_mult_estimate!(
-    A::Matrix{<:AbstractFloat},
-    λ::Vector{<:AbstractFloat},
-    ∇fx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    A::Matrix{T},
+    λ::Vector{T},
+    ∇fx::Vector{T},
+    cx::Vector{T},
     scaling_done::Bool,
-    diag_scale::Vector{<:AbstractFloat},
-    F::Factorization{<:AbstractFloat},
+    diag_scale::Vector{T},
+    F::Factorization{T},
     iter::Iteration,
-    ε_rank::AbstractFloat)
+    ε_rank::T) where {T} 
 
     (t, n) = size(A)
-    v = zeros(t)
-    vnz = zeros(t)
+    v = zeros(T, t)
+    vnz = zeros(T, t)
     inv_p = invperm(F.p)
     prankA = pseudo_rank(diag(F.R), ε_rank)
 
@@ -481,7 +475,7 @@ function first_lagrange_mult_estimate!(
     
     v[1:prankA] = UpperTriangular(F.R[1:prankA, 1:prankA]) \ b[1:prankA]
     if prankA < t
-        v[prankA+1:t] = zeros(t - prankA)
+        v[prankA+1:t] = zeros(T, t - prankA)
     end
     λ_ls = v[inv_p]
 
@@ -493,13 +487,13 @@ function first_lagrange_mult_estimate!(
     # λ = λ_ls - (A*A^T) *cx
 
     b = -cx[F.p]
-    y = zeros(t)
+    y = zeros(T, t)
     #                -1
     # Compute y =(L11) * b
     y[1:prankA] = LowerTriangular((F.R')[1:prankA, 1:prankA]) \ b[1:prankA]
     #              -1
     # Compute u = R  * y
-    u = zeros(t)
+    u = zeros(T, t)
     u[1:prankA] = UpperTriangular(F.R[1:prankA, 1:prankA]) \ y[1:prankA]
     λ[:] = λ_ls + u[inv_p]
     # Back transform due to row scaling of matrix A
@@ -514,14 +508,14 @@ end
 #                     T          T            T
 # Solves the system  A * λ = J(x) (r(x) + J(x) * p_gn))
 function second_lagrange_mult_estimate!(
-    J::Matrix{<:AbstractFloat},
+    J::Matrix{T},
     F_A::Factorization,
-    λ::Vector{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
-    p_gn::Vector{<:AbstractFloat},
+    λ::Vector{T},
+    rx::Vector{T},
+    p_gn::Vector{T},
     t::Int,
     scaling::Bool,
-    diag_scale::Vector{<:AbstractFloat})
+    diag_scale::Vector{T}) where {T}
 
     J1 = (J*F_A.Q)[:, 1:t]
     b = J1' * (rx + J * p_gn)
@@ -537,9 +531,9 @@ end
 
 
 function minmax_lagrangian_mult(
-    λ::Vector{<:AbstractFloat},
+    λ::Vector{T},
     working_set::WorkingSet,
-    active_C::Constraint)
+    active_C::Constraint) where {T}
     
     # Data
 
@@ -573,11 +567,11 @@ end
 
 function check_constraint_deletion(
     q::Int,
-    A::Matrix{<:AbstractFloat},
-    λ::Vector{<:AbstractFloat},
+    A::Matrix{T},
+    λ::Vector{T},
     scaling::Bool,
-    diag_scale::Vector{<:AbstractFloat},
-    grad_res::AbstractFloat)
+    diag_scale::Vector{T},
+    grad_res::T) where {T}
 
       
     t = size(A, 1)
@@ -607,9 +601,9 @@ end
 # Move violated constraints to the working set
 
 function evaluate_violated_constraints(
-    cx::Vector{<:AbstractFloat},
+    cx::Vector{T},
     W::WorkingSet,
-    index_α_upp::Int)
+    index_α_upp::Int) where {T}
 
     # Data
     ε = sqrt(eps(eltype(cx)))
@@ -634,20 +628,20 @@ end
 
 # Updates QR factorisation of A^T by appyling Givens rotations
 
-function update_QR_A(A::Matrix{<:AbstractFloat})
+function update_QR_A(A::Matrix{T}) where {T}
     (t,n) = size(A)
     F_A = qr(A', ColumnNorm()) 
     Q1 = F_A.Q*Matrix(I,n,n)
     L11, P1 = Matrix(F_A.R'), F_A.P
     return P1, L11, Q1
 end
-# Returns 
+
 function update_QR_A(
-    Q::Matrix{<:AbstractFloat},
-    R::Matrix{<:AbstractFloat},
-    p::Vector{<:Int},
+    Q::Matrix{T},
+    R::Matrix{T},
+    p::Vector{Int},
     s::Int,
-    t::Int)
+    t::Int) where {T}
 
     # Update permutation vector, form permutation matrix, delete j-th column of matrix R 
     j = p[s]
@@ -704,17 +698,17 @@ Then, compute the search direction using Gauss-Newton method.
 =#
 function update_working_set(
     W::WorkingSet,
-    rx::Vector{<:AbstractFloat},
-    A::Matrix{<:AbstractFloat},
+    rx::Vector{T},
+    A::Matrix{T},
     C::Constraint,
-    ∇fx::Vector{<:AbstractFloat},
-    J::Matrix{<:AbstractFloat},
-    p_gn::Vector{<:AbstractFloat},
+    ∇fx::Vector{T},
+    J::Matrix{T},
+    p_gn::Vector{T},
     iter_k::Iteration,
-    ε_rank::AbstractFloat)
+    ε_rank::T) where {T}
 
 
-    λ = Vector{typeof(ε_rank)}(undef, W.t)
+    λ = Vector{T}(undef, W.t)
     
     F_A = qr(C.A', ColumnNorm())
     
@@ -842,21 +836,21 @@ Then, initialize the penalty constants.
 
 
 
-function init_working_set(cx::Vector{<:AbstractFloat}, K::Array{Array{Float64,1},1}, 
-    step::Iteration, q::Int, l::Int)
+function init_working_set(cx::Vector{T}, K::Array{Array{T,1},1}, 
+    step::Iteration, q::Int, l::Int) where {T}
 
     δ, ϵ, ε_rel = 0.1, 0.01, sqrt(eps(eltype(cx)))
 
     # Initialisation des pénalités
-    K[:] = [δ * ones(l) for i = 1:length(K)]
+    K[:] = [δ * ones(eltype(cx), l) for i = 1:length(K)]
     for i = 1:l
         pos = min(abs(cx[i]) + ϵ, δ)
         step.w[i] = pos
     end
 
     # Determination du premier ensemble actif
-    active = zeros(Int64, l)
-    inactive = zeros(Int64, l - q)
+    active = zeros(typeof(q), l)
+    inactive = zeros(typeof(l), l - q)
     t = q
     lmt = 0
 
@@ -881,16 +875,16 @@ end
 # Returns dimension when previous descent direction was computed with subspace minimization
 
 function subspace_min_previous_step(
-    τ::Vector{<:AbstractFloat},
-    ρ::Vector{<:AbstractFloat},
-    ρ_prk::AbstractFloat,
-    c1::AbstractFloat,
+    τ::Vector{T},
+    ρ::Vector{T},
+    ρ_prk::T,
+    c1::T,
     pseudo_rk::Int,
     previous_dimR::Int,
-    progress::AbstractFloat,
-    predicted_linear_progress::AbstractFloat,
-    prelin_previous_dim::AbstractFloat,
-    previous_α::AbstractFloat)
+    progress::T,
+    predicted_linear_progress::T,
+    prelin_previous_dim::T,
+    previous_α::T) where {T}
 
     # Data
 
@@ -926,12 +920,12 @@ end
 # Returns dimension to use when previous descent direction was computed with Gauss-Newton method
 
 function gn_previous_step(
-    τ::Vector{<:AbstractFloat},
-    τ_prk::AbstractFloat,
+    τ::Vector{T},
+    τ_prk::T,
     mindim::Int,
-    ρ::Vector{<:AbstractFloat},
-    ρ_prk::AbstractFloat,
-    pseudo_rank::Int)
+    ρ::Vector{T},
+    ρ_prk::T,
+    pseudo_rank::Int) where {T}
 
     # Data
     τ_max, ρ_min = 2e-1, 5e-1
@@ -960,11 +954,11 @@ end
 # β_k = sqrt(||b1||^2 + ||d1||^2) is an information used to compute the convergence rate
 
 function check_gn_direction(
-    b1nrm::AbstractFloat,
-    d1nrm::AbstractFloat,
-    d1nrm_as_km1::AbstractFloat,
-    dnrm::AbstractFloat,
-    active_c_sum::AbstractFloat,
+    b1nrm::T,
+    d1nrm::T,
+    d1nrm_as_km1::T,
+    dnrm::T,
+    active_c_sum::T,
     iter_number::Int,
     rankA::Int,
     n::Int,
@@ -973,11 +967,11 @@ function check_gn_direction(
     constraint_added::Bool,
     constraint_deleted::Bool,
     W::WorkingSet,
-    cx::Vector{<:AbstractFloat},
-    λ::Vector{<:AbstractFloat},
+    cx::Vector{T},
+    λ::Vector{T},
     iter_km1::Iteration,
     scaling::Bool,
-    diag_scale::Vector{<:AbstractFloat})
+    diag_scale::Vector{T}) where {T}
 
     # Data
     δ = 1e-1
@@ -1060,13 +1054,13 @@ end
 function determine_solving_dim(
     previous_dimR::Int,
     rankR::Int,
-    predicted_linear_progress::AbstractFloat,
-    obj_progress::AbstractFloat,
-    prelin_previous_dim::AbstractFloat,
-    R::UpperTriangular{Float64,Array{Float64,2}},
-    y::Vector{<:AbstractFloat},
-    previous_α::AbstractFloat,
-    restart::Bool)
+    predicted_linear_progress::T,
+    obj_progress::T,
+    prelin_previous_dim::T,
+    R::UpperTriangular{Float64,Array{T,2}},
+    y::Vector{T},
+    previous_α::T,
+    restart::Bool) where {T}
 
     # Data
     c1 = 0.1
@@ -1110,7 +1104,7 @@ function determine_solving_dim(
                 # Gauss-Newton at previous step
                 suggested_dim = gn_previous_step(l_estim_sd, nrm_estim_sd, mindim, l_estim_righthand, nrm_estim_righthand, rankR)
 
-            elseif previous_dimR != rankR && rankR > 0
+            elseif previous_dimR != rankR && previous_dimR > 0
                 # Subbspace-Minimization at previous step
                 suggested_dim = subspace_min_previous_step(l_estim_sd, l_estim_righthand, nrm_estim_righthand,
                     c1, rankR, previous_dimR, obj_progress, predicted_linear_progress,
@@ -1135,18 +1129,18 @@ end
 # Computes the dimensions of the subspaces where minimization should be done
 
 function choose_subspace_dimensions(
-    rx_sum::AbstractFloat,
-    rx::Vector{<:AbstractFloat},
-    active_cx_sum::AbstractFloat,
-    J1::Matrix{<:AbstractFloat},
+    rx_sum::T,
+    rx::Vector{T},
+    active_cx_sum::T,
+    J1::Matrix{T},
     t::Int,
     rankJ2::Int,
     rankA::Int,
-    b::Vector{<:AbstractFloat},
+    b::Vector{T},
     F_L11::Factorization,
     F_J2::Factorization,
     previous_iter::Iteration,
-    restart::Bool)
+    restart::Bool) where {T}
 
     # Data
     c1, c2, α_low = 0.1, 0.01, 0.2
@@ -1210,19 +1204,19 @@ function search_direction_analys(
     previous_iter::Iteration,
     current_iter::Iteration,
     iter_number::Int,
-    x::Vector{<:AbstractFloat},
+    x::Vector{T},
     c::ConstraintsFunction,
     r::ResidualsFunction,
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    rx::Vector{T},
+    cx::Vector{T},
     active_C::Constraint,
-    active_cx_sum::AbstractFloat,
-    p_gn::Vector{<:AbstractFloat},
-    J::Matrix{<:AbstractFloat},
+    active_cx_sum::T,
+    p_gn::Vector{T},
+    J::Matrix{T},
     working_set::WorkingSet,
     F_A::Factorization,
     F_L11::Factorization,
-    F_J2::Factorization)
+    F_J2::Factorization) where {T}
 
     # Data
     (m,n) = size(J)
@@ -1230,7 +1224,7 @@ function search_direction_analys(
     rx_sum = dot(rx,rx)
     active_cx = active_C.cx
     scaling = active_C.scaling
-    diag_scale = 
+    diag_scale = active_C.diag_scale
     λ = current_iter.λ
     constraint_added = current_iter.add
     constraint_deleted = current_iter.del
@@ -1312,7 +1306,7 @@ Compute and return the evaluation of the merit function at ``(x+\\alpha p,w)`` w
 
 function psi(
     x::Vector,
-    α::AbstractFloat,
+    α::T,
     p::Vector,
     r::ResidualsFunction,
     c::ConstraintsFunction,
@@ -1320,11 +1314,11 @@ function psi(
     m::Int,
     l::Int,
     t::Int,
-    active::Vector{<:Int},
-    inactive::Vector{<:Int})
+    active::Vector{Int},
+    inactive::Vector{Int}) where {T}
 
-    rx_new, cx_new = zeros(m), zeros(l)
-    penalty_constraint_sum = 0.0
+    rx_new, cx_new = zeros(T, m), zeros(T, l)
+    penalty_constraint_sum = zero(T)
 
     #Evaluate residuals and constraints at point x+αp
     x_new = x + α * p
@@ -1350,10 +1344,10 @@ end
 # ASSORT
 
 function assort!(
-    K::Array{Array{Float64,1},1},
-    w::Vector{<:AbstractFloat},
+    K::Array{Array{T,1},1},
+    w::Vector{T},
     t::Int,
-    active::Vector{<:Int})
+    active::Vector{Int}) where {T}
 
     for i in 1:t, ii in 1:4
         k = active[i]
@@ -1381,12 +1375,12 @@ end
 
 function min_norm_w!(
     ctrl::Int,
-    w::Vector{<:AbstractFloat},
-    w_old::Vector{<:AbstractFloat},
-    y::Vector{<:AbstractFloat},
-    τ::AbstractFloat,
-    pos_index::Vector{<:Int},
-    nb_pos::Int)
+    w::Vector{T},
+    w_old::Vector{T},
+    y::Vector{T},
+    τ::T,
+    pos_index::Vector{Int},
+    nb_pos::Int) where {T}
 
     w[:] = w_old
     if nb_pos > 0
@@ -1435,14 +1429,14 @@ end
 # Update the penalty constants using the euclidean norm
 
 function euclidean_norm_weight_update(
-    vA::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    vA::Vector{T},
+    cx::Vector{T},
     active::Vector{<:Int},
     t::Int,
-    μ::AbstractFloat,
+    μ::T,
     dimA::Int,
-    previous_w::Vector{<:AbstractFloat},
-    K::Array{Array{Float64,1},1})
+    previous_w::Vector{T},
+    K::Array{Array{T,1},1}) where {T}
 
     # if no active constraints, previous penalty weights are used
     w = previous_w[:]
@@ -1510,14 +1504,15 @@ end
 # constraints in the current working setb
 
 function max_norm_weight_update!(
-    nrm_Ap::AbstractFloat,
-    rmy::AbstractFloat,
-    α_w::AbstractFloat,
-    δ::AbstractFloat,
-    w::Vector{<:AbstractFloat},
-    active::Vector{<:Int},
+    nrm_Ap::T,
+    rmy::T,
+    α_w::T,
+    δ::T,
+    w::Vector{T},
+    active::Vector{Int},
     t::Int,
-    K::Array{Array{Float64,1},1})
+    K::Array{Array{T,1},1}) where {T}
+
     μ = (abs(α_w - 1.0) <= δ ? 0.0 : rmy / nrm_Ap)
     i1 = (active[1] != 0 ? active[1] : 1)
 
@@ -1550,15 +1545,15 @@ end
 # where ψ(α) is approximalety minimized
 
 function penalty_weight_update(
-    w_old::Vector{<:AbstractFloat},
-    Jp::Vector{<:AbstractFloat},
-    Ap::Vector{<:AbstractFloat},
-    K::Array{Array{Float64,1},1},
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
+    w_old::Vector{T},
+    Jp::Vector{T},
+    Ap::Vector{T},
+    K::Array{Array{T,1},1},
+    rx::Vector{T},
+    cx::Vector{T},
     work_set::WorkingSet,
     dimA::Int,
-    norm_code::Int)
+    norm_code::Int) where {T}
 
     # Data
     δ = 0.25
@@ -1641,15 +1636,15 @@ end
 # CONCAT
 # Compute in place the components of vector v used for polynomial minimization
 
-function concatenate!(v::Vector{<:AbstractFloat},
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
-    w::Vector{<:AbstractFloat},
+function concatenate!(v::Vector{T},
+    rx::Vector{T},
+    cx::Vector{T},
+    w::Vector{T},
     m::Int,
     t::Int,
     l::Int,
     active::Vector{<:Int},
-    inactive::Vector{<:Int})
+    inactive::Vector{<:Int}) where {T}
 
     v[1:m] = rx[:]
     if t != 0
@@ -1671,20 +1666,20 @@ end
 # Compute in place vectors v0 and v2 so that one dimensional minimization in R^m can be done
 # Also modifies components of v1 related to constraints
 
-function coefficients_linesearch!(v0::Vector{<:AbstractFloat},
-    v1::Vector{<:AbstractFloat},
-    v2::Vector{<:AbstractFloat},
-    α_k::AbstractFloat,
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
-    rx_new::Vector{<:AbstractFloat},
-    cx_new::Vector{<:AbstractFloat},
-    w::Vector{<:AbstractFloat},
+function coefficients_linesearch!(v0::Vector{T},
+    v1::Vector{T},
+    v2::Vector{T},
+    α_k::T,
+    rx::Vector{T},
+    cx::Vector{T},
+    rx_new::Vector{T},
+    cx_new::Vector{T},
+    w::Vector{T},
     m::Int,
     t::Int,
     l::Int,
-    active::Vector{<:Int},
-    inactive::Vector{<:Int})
+    active::Vector{Int},
+    inactive::Vector{Int}) where {T}
 
     # Compute v0
     concatenate!(v0, rx, cx, w, m, t, l, active, inactive)
@@ -1700,9 +1695,9 @@ end
 
 # Equivalent Fortran : QUAMIN in dblreduns.f
 
-function minimize_quadratic(x1::AbstractFloat, y1::AbstractFloat,
-    x2::AbstractFloat, y2::AbstractFloat,
-    x3::AbstractFloat, y3::AbstractFloat)
+function minimize_quadratic(x1::T, y1::T,
+    x2::T, y2::T,
+    x3::T, y3::T) where {T}
 
     d1, d2 = y2 - y1, y3 - y1
     s = (x3 - x1)^2 * d1 - (x2 - x1)^2 * d2
@@ -1714,12 +1709,12 @@ end
 # Equivalent Fortran : MINRN in dblreduns.f
 
 
-function minrn(x1::AbstractFloat, y1::AbstractFloat,
-    x2::AbstractFloat, y2::AbstractFloat,
-    x3::AbstractFloat, y3::AbstractFloat,
-    α_min::AbstractFloat,
-    α_max::AbstractFloat,
-    p_max::AbstractFloat)
+function minrn(x1::T, y1::T,
+    x2::T, y2::T,
+    x3::T, y3::T,
+    α_min::T,
+    α_max::T,
+    p_max::T) where {T}
 
     ε = sqrt(eps(typeof(p_max))) / p_max
 
@@ -1746,12 +1741,12 @@ end
 
 
 function parameters_rm(
-    v0::Vector{<:AbstractFloat},
-    v1::Vector{<:AbstractFloat},
-    v2::Vector{<:AbstractFloat},
-    x_min::AbstractFloat,
-    ds::Polynomial{<:AbstractFloat},
-    dds::Polynomial{<:AbstractFloat})
+    v0::Vector{T},
+    v1::Vector{T},
+    v2::Vector{T},
+    x_min::T,
+    ds::Polynomial{T},
+    dds::Polynomial{T}) where {T}
 
     dds_best = dds(x_min)
     η, d = 0.1, 1.0
@@ -1791,17 +1786,17 @@ function parameters_rm(
 
 end
 
-function bounds(α_min::AbstractFloat, α_max::AbstractFloat, α::AbstractFloat, s::Polynomial{<:AbstractFloat})
+function bounds(α_min::T, α_max::T, α::T, s::Polynomial{T}) where {T}
     α = min(α, α_max)
     α = max(α, α_min)
     return α, s(α)
 end
 
 function newton_raphson(
-    x_min::AbstractFloat,
-    Dm::AbstractFloat,
-    ds::Polynomial{<:AbstractFloat},
-    dds::Polynomial{<:AbstractFloat})
+    x_min::T,
+    Dm::T,
+    ds::Polynomial{T},
+    dds::Polynomial{T}) where {T}
 
     α, newton_iter = x_min, 0
     ε, error = 1e-4, 1.0
@@ -1817,13 +1812,13 @@ end
 
 
 # Equivalent Fortran : ONER in dblreduns.f
-function one_root(c::AbstractFloat, d::AbstractFloat, a::AbstractFloat)
+function one_root(c::T, d::T, a::T) where {T}
     arg1, arg2 = -c / 2 + sqrt(d), -c / 2 - sqrt(d)
     return cbrt(arg1) + cbrt(arg2) - a / 3
 end
 
 # Equivalent Fortran : TWOR in dblreduns.f
-function two_roots(b::AbstractFloat, c::AbstractFloat, d::AbstractFloat, a::AbstractFloat, x_min::AbstractFloat)
+function two_roots(b::T, c::T, d::T, a::T, x_min::T) where {T}
     φ = acos(abs(c / 2) / (-b / 3)^(3 / 2))
     t = (c <= 0 ? 2 * sqrt(-b / 3) : -2 * sqrt(-b / 3))
 
@@ -1845,12 +1840,12 @@ end
 
 # Equivalent Fortran : MINRM in dblreduns.f
 function minrm(
-    v0::Vector{<:AbstractFloat},
-    v1::Vector{<:AbstractFloat},
-    v2::Vector{<:AbstractFloat},
-    x_min::AbstractFloat,
-    α_min::AbstractFloat,
-    α_max::AbstractFloat)
+    v0::Vector{T},
+    v1::Vector{T},
+    v2::Vector{T},
+    x_min::T,
+    α_min::T,
+    α_max::T) where {T}
 
     s = Polynomial([0.5 * dot(v0, v0), dot(v0, v1), dot(v0, v2) + 0.5 * dot(v1, v1), dot(v1, v2), 0.5 * dot(v2, v2)])
     ds = derivative(s)
@@ -1875,11 +1870,11 @@ end
 
 
 function check_reduction(
-    ψ_α::AbstractFloat,
-    ψ_k::AbstractFloat,
-    approx_k::AbstractFloat,
-    η::AbstractFloat,
-    diff_psi::AbstractFloat)
+    ψ_α::T,
+    ψ_k::T,
+    approx_k::T,
+    η::T,
+    diff_psi::T) where {T}
 
     # Data
     δ = 0.2
@@ -1898,22 +1893,22 @@ end
 # or until steplength times search direction is below square root of relative_prevision
 
 function goldstein_armijo_step(
-    ψ0::AbstractFloat,
-    dψ0::AbstractFloat,
-    α_min::AbstractFloat,
-    τ::AbstractFloat,
-    p_max::AbstractFloat,
-    x::Vector{<:AbstractFloat},
-    α0::AbstractFloat,
-    p::Vector{<:AbstractFloat},
+    ψ0::T,
+    dψ0::T,
+    α_min::T,
+    τ::T,
+    p_max::T,
+    x::Vector{T},
+    α0::T,
+    p::Vector{T},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    w::Vector{<:AbstractFloat},
+    w::Vector{T},
     m::Int,
     l::Int,
     t::Int,
-    active::Vector{<:Int},
-    inactive::Vector{<:Int})
+    active::Vector{Int},
+    inactive::Vector{Int}) where {T}
 
     u = α0
     sqr_ε = sqrt(eps(typeof(u)))
@@ -1944,20 +1939,20 @@ end
 
 
 function linesearch_constrained(
-    x::Vector{<:AbstractFloat},
-    α0::AbstractFloat,
-    p::Vector{<:AbstractFloat},
+    x::Vector{T},
+    α0::T,
+    p::Vector{T},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    rx::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
-    JpAp::Vector{<:AbstractFloat},
-    w::Vector{<:AbstractFloat},
+    rx::Vector{T},
+    cx::Vector{T},
+    JpAp::Vector{T},
+    w::Vector{T},
     work_set::WorkingSet,
-    ψ0::AbstractFloat,
-    dψ0::AbstractFloat,
-    α_low::AbstractFloat,
-    α_upp::AbstractFloat)
+    ψ0::T,
+    dψ0::T,
+    α_low::T,
+    α_upp::T) where {T}
 
 
     # Data
@@ -2144,11 +2139,11 @@ end
 # Determine the upper bound of the steplength
 
 function upper_bound_steplength(
-    A::Matrix{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
-    p::Vector{<:AbstractFloat},
+    A::Matrix{T},
+    cx::Vector{T},
+    p::Vector{T},
     work_set::WorkingSet,
-    index_del::Int)
+    index_del::Int) where {T}
 
     # Data
     inactive = work_set.inactive
@@ -2194,17 +2189,17 @@ If search direction computed with method of Newton, an undamped step is taken, i
 function compute_steplength(
     iter::Iteration,
     previous_iter::Iteration,
-    x::Vector{<:AbstractFloat},
+    x::Vector{T},
     r::ResidualsFunction,
-    rx::Vector{<:AbstractFloat},
-    J::Matrix{<:AbstractFloat},
+    rx::Vector{T},
+    J::Matrix{T},
     c::ConstraintsFunction,
-    cx::Vector{<:AbstractFloat},
-    A::Matrix{<:AbstractFloat},
+    cx::Vector{T},
+    A::Matrix{T},
     active_constraint::Constraint,
     work_set::WorkingSet,
-    K::Array{Array{Float64,1},1},
-    weight_code::Int)
+    K::Array{Array{T,1},1},
+    weight_code::Int) where {T}
 
     # Data
     c1 = 1e-3
@@ -2292,17 +2287,17 @@ function compute_steplength(
 end
 
 function check_derivatives(
-    dψ0::AbstractFloat,
-    ψ0::AbstractFloat,
-    ψ_k::AbstractFloat,
-    x_old::Vector{<:AbstractFloat},
-    α::AbstractFloat,
-    p::Vector{<:AbstractFloat},
+    dψ0::T,
+    ψ0::T,
+    ψ_k::T,
+    x_old::Vector{T},
+    α::T,
+    p::Vector{T},
     r::ResidualsFunction,
     c::ConstraintsFunction,
-    w::Vector{<:AbstractFloat},
+    w::Vector{T},
     work_set::WorkingSet,
-    m::Int)
+    m::Int) where {T}
 
     # Data
     l,t = work_set.l, work_set.t
@@ -2400,20 +2395,20 @@ function check_termination_criteria(
     prev_iter::Iteration,
     W::WorkingSet,
     active_C::Constraint,
-    x::Vector{<:AbstractFloat},
-    cx::Vector{<:AbstractFloat},
-    rx_sum::AbstractFloat,
-    ∇fx::Vector{<:AbstractFloat},
+    x::Vector{T},
+    cx::Vector{T},
+    rx_sum::T,
+    ∇fx::Vector{T},
     max_iter::Int,
     nb_iter::Int,
-    ε_abs::AbstractFloat,
-    ε_rel::AbstractFloat,
-    ε_x::AbstractFloat,
-    ε_c::AbstractFloat,
+    ε_abs::T,
+    ε_rel::T,
+    ε_x::T,
+    ε_c::T,
     error_code::Int,
-    sigmin::AbstractFloat,
-    λ_abs_max::AbstractFloat,
-    Ψ_error::Int)
+    sigmin::T,
+    λ_abs_max::T,
+    Ψ_error::Int) where {T}
 
     exit_code = 0
     alfnoi = ε_rel / (norm(iter.p) + ε_abs)
@@ -2628,7 +2623,7 @@ function enlsip(x0::Vector{T},
     start_time = time()
     nb_iteration = 0    
     # Vector of penalty constants
-    K = [zeros(l) for i = 1:4]
+    K = [zeros(T, l) for i = 1:4]
 
     # Evaluate residuals, constraints and jacobian matrices at starting point
     rx, cx = zeros(m), zeros(l)
