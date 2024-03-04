@@ -210,6 +210,20 @@ mutable struct WorkingSet
     inactive::Vector{Int}
 end
 
+#= Constructot for WorkingSet
+    q : Number of equality constraints
+    l : Number of inequality constraints
+    Initial acticve set contains all equality constraints indices
+    Initial inactive set contains all inequality constraints indices
+=#
+function WorkingSet(q::Int, l::Int)
+    active = zeros(Int, l)
+    inactive = zeros(Int, l-q)
+    active[1:q] = [i for i=1:q]
+    inactive[:] = [i for i=q+1:l]
+    return WorkingSet(q, q, l, active, inactive)
+end
+
 # Equivalent Fortran : DELETE in dblreduns.f
 # Moves the active constraint number s to the inactive set
 
@@ -231,7 +245,7 @@ function remove_constraint!(W::WorkingSet, s::Int)
 end
 
 # Equivalent Fortran : ADDIT in dblreduns.f
-# Add the inactive constraint nulber s to the active s
+# Add the inactive constraint number s to the active set
 
 function add_constraint!(W::WorkingSet, s::Int)
 
