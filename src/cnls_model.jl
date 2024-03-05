@@ -19,10 +19,12 @@ function ResidualsFunction(eval, jac_eval)
     ResidualsFunction(eval, jac_eval, 0, 0)
 end
 
-function ResidualsFunction(eval)
-    num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
-    ResidualsFunction(eval, num_jac_eval,0,0)
-end
+# function ResidualsFunction(eval)
+#     num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
+#     ResidualsFunction(eval, num_jac_eval,0,0)
+# end
+
+ResidualsFunction(eval) = ResidualsFunction(eval, x::Vector -> ForwardDiff.jacobian(eval, x))
 
 mutable struct ConstraintsFunction <: EvaluationFunction 
     conseval
@@ -35,10 +37,12 @@ function ConstraintsFunction(eval, jac_eval)
     ConstraintsFunction(eval, jac_eval, 0, 0)
 end
 
-function ConstraintsFunction(eval)
-    num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
-    ConstraintsFunction(eval, num_jac_eval,0,0)
-end
+# function ConstraintsFunction(eval)
+#     num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
+#     ConstraintsFunction(eval, num_jac_eval,0,0)
+# end
+
+ConstraintsFunction(eval) = ConstraintsFunction(eval, x::Vector -> ForwardDiff.jacobian(eval, x))
 
 #= Functions to compute in place the residuals, constraints and jacobian matrices of a given EvaluationFunction =#
 
@@ -48,7 +52,7 @@ function res_eval!(r::ResidualsFunction, x::Vector{T}, rx::Vector{T}) where {T<:
     return
 end
 
-function jacres_eval!(r::ResidualsFunction, x::Vector{<:AbstractFloat}, J::Matrix)
+function jacres_eval!(r::ResidualsFunction, x::Vector{T}, J::Matrix{T}) where {T<:AbstractFloat}
     J[:] = r.jacres_eval(x)
     r.nb_jacres_eval += 1
     return
@@ -60,7 +64,7 @@ function cons_eval!(c::ConstraintsFunction, x::Vector{T}, cx::Vector{T}) where {
     return
 end
 
-function jaccons_eval!(c::ConstraintsFunction, x::Vector{<:AbstractFloat}, A::Matrix)
+function jaccons_eval!(c::ConstraintsFunction, x::Vector{T}, A::Matrix{T}) where {T<:AbstractFloat}
     A[:] = c.jaccons_eval(x)
     c.nb_jaccons_eval += 1
     return
@@ -230,6 +234,69 @@ Returns the total number of constraints, i.e. equalities, inequalities and bound
 See also: [`CnlsModel`](@ref).
 """
 total_nb_constraints(model::CnlsModel) = model.nb_eqcons + model.nb_ineqcons + count(isfinite, model.x_low) + count(isfinite, model.x_upp)
+
+
+"""
+    equality_constrains_values(model)
+    
+Returns the vector of equality constraints values at the solution of `model` (if they are any).
+"""
+function equality_constrains_values(model::CnlsModel)
+    sol = solution(model)
+    hx = eltype{sol}[]
+    if model.eq_constraints !== nothing
+        hx = model.eq_constraints(sol)
+    end
+    return hx
+end
+
+"""
+    inequality_constraints_values(model)
+
+Returns the vector of inequality constraints values at the solution of `model` (if they are any).
+"""
+function inequality_constraints_values(model::CnlsModel)
+    sol = solution(model)
+    gx = eltype{sol}[]
+    if model.eq_constraints !== nothing
+        gx = model.eq_constraints(sol)
+    end
+    return gx
+end
+
+"""
+    bounds_constraints_values(model)
+
+Returns the vector of box constraints values at the solution of `model` (if they are any).   
+"""
+function bounds_constraints_values(model::CnlsModel)
+    sol = solution(model)
+    return vcat(filter(isfinite, sol-model.x_low), filter(isfinite, model.x_upp-sol))
+end
+
+"""
+    constraints_values(model)
+
+Returns the vector of values of all the constraints in `model` at the solution. 
+
+If one wants to compute each type of constraints seperately, see [`equality_constraints_values`](@ref), [`inequality_constraints_values`](@ref) and [`bounds_constraints_values`](@ref).
+"""
+function constraints_values(model::CnlsModel)
+    sol = solution(model)
+    q, ℓ = model.nb_eqcons, model.nb_ineqcons
+
+    cx = Vector{eltype(sol)}(undef, total_nb_constraints(model))
+
+    if model.nb_eqcons > 0
+        cx[1:q] = equality_constrains_values(model)
+    end
+    if model.nb_ineqcons > 0
+        cx[q+1:q+ℓ] = inequality_constraints_values(model)
+    end
+    cx[q+ℓ+1:end] = bounds_constraints_values(model)
+    
+    return cx
+end
 
 """
     model = CnlsModel(residuals, nb_parameters, nb_residuals)

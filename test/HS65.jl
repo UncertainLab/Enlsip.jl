@@ -18,8 +18,8 @@
 
 
     hs65_model = Enlsip.CnlsModel(r, n, m ;jacobian_residuals=jac_r, starting_point=x0, ineq_constraints = c, jacobian_ineqcons=jac_c, nb_ineqcons = 1, x_low=x_l, x_upp=x_u)
-    print_cnls_model(hs65_model)
     solve!(hs65_model)
+
     print_cnls_model(hs65_model)
 
     @test size(x0,1) == hs65_model.nb_parameters

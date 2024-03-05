@@ -2503,7 +2503,7 @@ function print_header(m::Int, n::Int, q::Int, l::Int, scaling::Bool, io::IO=stdo
         println(io, '*'^64)
         println(io, "*",' '^62,"*")
 
-        println(io, "*"," "^26,"Enlsip 0.9.1"," "^24,"*")
+        println(io, "*"," "^23,"Enlsip.jl v0.9.2"," "^23,"*")
         println(io, "*",' '^62,"*")
         println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
         println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
