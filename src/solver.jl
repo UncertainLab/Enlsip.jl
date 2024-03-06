@@ -77,7 +77,7 @@ The following info are also printed:
 
 * value of the objective function found by the algorithm
 
-* termination status (see [`status`](@ref)
+* termination status (see [`status`](@ref))
 """
 function print_cnls_model(model::CnlsModel, io::IO=stdout)
     model_status = status(model)

@@ -53,9 +53,7 @@
     x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n]
 
     Crmodel = CnlsModel(r,n,m; starting_point=x0, jacobian_residuals = jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
-    print_cnls_model(Crmodel)
     solve!(Crmodel)
-    print_cnls_model(Crmodel)
 
     @test size(x0,1) == Crmodel.nb_parameters
     @test r(x0) ≈ Crmodel.residuals(x0)

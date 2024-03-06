@@ -43,7 +43,10 @@ The three following positional arguments are mandatory to create a model:
 * `nb_parameters` : number of variables
 * `nb_residuals` : number of residuals
 
-The following keywords arguments are optional and deal with constraints and Jacobian matrices. If the Jacobian matrices functions are not provided, they are computed numerically by forward differences within the `Enlsip` solver.
+The following keywords arguments are optional and deal with constraints and Jacobian matrices. 
+If the Jacobian matrices functions are not provided, they are computed numerically by forward differences using automatic differenciation[^1].
+
+[^1]: `ForwardDiff.jl` [https://juliadiff.org/ForwardDiff.jl/stable/](https://juliadiff.org/ForwardDiff.jl/stable/)
 
  Argument             | Details
 :---------------------|:----------------------------------------------
@@ -57,6 +60,8 @@ The following keywords arguments are optional and deal with constraints and Jaco
  `nb_ineqcons`        | number of inequality constraints
  `x_low`              | vector of lower bounds
  `x_upp`              | vector of upper bounds
+
+It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called as `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
 
 ## [Solving a model](@id Solving a model)
 
@@ -79,11 +84,13 @@ Diagnosis of the conduct of the algorithm can be printed by either setting the `
 
 One can get additional info about termination of the algorithm by calling one of the following functions:
 
- Name                     |
-:-------------------------|
-[`solution`](@ref)        |
-[`status`](@ref)          |
-[`objective_value`](@ref) |
+ Name                        |
+:----------------------------|
+[`solution`](@ref)           |
+[`status`](@ref)             |
+[`constraints_values`](@ref) |
+[`objective_value`](@ref)    |
+
 
 ```@docs
 Enlsip.solution
@@ -91,6 +98,10 @@ Enlsip.solution
 
 ```@docs
 Enlsip.status
+```
+
+```@docs
+Enlsip.constraints_values
 ```
 
 ```@docs
@@ -105,12 +116,16 @@ We show how to implement and solve the following problem:
 
 ```math
 \begin{aligned}
-\min{x_1, x_2, x_3} \quad & (x_1-x_2)^2 + \dfrac{(x_1+x_2-10)^2}{9}+(x_3-5)^2 \\ 
+\min_{x_1, x_2, x_3} \quad & (x_1-x_2)^2 + \dfrac{(x_1+x_2-10)^2}{9}+(x_3-5)^2 \\ 
 \text{s.t.} \quad & 48-x_1^2-x_2^2-x_3^2 \geq 0\\
 & -4.5\leq x_i \leq 4.5, \quad i=1,2\\
 & -5 \leq x_3  \leq 5.
 \end{aligned}.
 ```
+
+The expected optimal solution is $(3.650461821, 3.65046168, 4.6204170507)$.
+
+Associated value of objective function equals $0.9535288567$.
 
 First, we provide the dimensions of the problems.
 
@@ -124,7 +139,8 @@ nb_constraints = 7 # number of inequality constraints
 nothing # hide
 ```
 
-Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point.
+Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point. In this example, we use the 
+starting point given in the reference[^HS80], i.e. $(-5, 5, 0)$
 
 ```@example tutorial
 # Residuals and Jacobian matrix associated

@@ -1,4 +1,4 @@
-@testset "Osborne 2 problem with automatic differenciation and bound constraints" begin
+@testset "Osborne 2: Box constrained problem" begin
     
     n = 11
     m = 65 
@@ -103,4 +103,11 @@
 
     osborne2_model = Enlsip.CnlsModel(r,n,m; starting_point = x0, x_low = low_bounds, x_upp = upp_bounds)
     solve!(osborne2_model)
+    bounds_values = Enlsip.constraints_values(osborne2_model)
+    @test nb_upper_bounds(osborne2_model) == length(upp_bounds) && nb_lower_bounds(osborne2_model) == length(low_bounds)
+    @test total_nb_constraints(osborne2_model) == nb_constraints
+    @test osborne2_model.jacobian_residuals === nothing
+    @test nb_equality_constraints(osborne2_model) == 0 && osborne2_model.eq_constraints === nothing
+    @test nb_inequality_constraints(osborne2_model) == 0 && osborne2_model.ineq_constraints === nothing
+    @test length(bounds_values) == length(low_bounds) + length(upp_bounds)
 end

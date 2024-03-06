@@ -2498,30 +2498,33 @@ end
 Functions to print details about execution of the algorithm
 =#
 
-function print_header(m::Int, n::Int, q::Int, l::Int, scaling::Bool, io::IO=stdout)
+function print_header(model::CnlsModel, io::IO=stdout)
     print(io,"\n\n")
-        println(io, '*'^64)
-        println(io, "*",' '^62,"*")
+    println(io, '*'^64)
+    println(io, "*",' '^62,"*")
 
-        println(io, "*"," "^23,"Enlsip.jl v0.9.2"," "^23,"*")
-        println(io, "*",' '^62,"*")
-        println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
-        println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
-        println(io, "* Per Ake Wedin from the Institute of Information Processing   *")
-        println(io, "* (University of Umea, Sweden).                                *")
-        println(io, "*",' '^62,"*")
-        println(io, '*'^64)
+    println(io, "*"," "^23,"Enlsip.jl v0.9.2"," "^23,"*")
+    println(io, "*",' '^62,"*")
+    println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
+    println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
+    println(io, "* Per Ake Wedin from the Institute of Information Processing   *")
+    println(io, "* (University of Umea, Sweden).                                *")
+    println(io, "*",' '^62,"*")
+    println(io, '*'^64)
 
-        println(io, "\nCharacteristics of the model\n\nNumber of parameters                 : ", @sprintf("%5i", n))
-        println(io, "Number of residuals                  : ", @sprintf("%5i", m))
-        println(io, "Number of equality constraints       : ", @sprintf("%5i", q))
-        println(io, "Number of inequality constraints     : ", @sprintf("%5i", (l - q)))
-        println(io, "Constraints internal scaling         : $scaling\n")
+    println(io, "\nCharacteristics of the model\n")
+    println(io, "Number of parameters.................: ", @sprintf("%5i", model.nb_parameters))
+    println(io, "Number of residuals..................: ", @sprintf("%5i", model.nb_residuals))
+    println(io, "Number of equality constraints.......: ", @sprintf("%5i", model.nb_eqcons))
+    println(io, "Number of inequality constraints.....: ", @sprintf("%5i", model.nb_ineqcons))
+    println(io, "Number of lower bounds...............: ", @sprintf("%5i", count(isfinite, model.x_low)))
+    println(io, "Number of upper bounds...............: ", @sprintf("%5i", count(isfinite, model.x_upp)))
+    println(io, "Constraints internal scaling.........: $(model.constraints_scaling)\n")
 end
 
 function print_initialized_model(model::CnlsModel, io::IO=stdout)
-    print_header(model.nb_residuals, model.nb_parameters, model.nb_eqcons, total_nb_constraints(model), model.constraints_scaling, io)
-    println("Model has been initialized.\n\nMethod solve! can be called to execute Enlsip.")
+    print_header(model, io)
+    println(io, "Model has been initialized.\n\nMethod solve! can be called to execute Enlsip.")
 end
 
 function print_iter(k::Int, iter_data::DisplayedInfo; io::IO=stdout)
@@ -2531,21 +2534,21 @@ end
 
 function final_print(model::CnlsModel, exec_info::ExecutionInfo, io::IO=stdout)
 
-    @printf(io, "\nNumber of iterations : %4d", length(exec_info.iterations_detail))
+    @printf(io, "\nNumber of iterations...................: %4d", length(exec_info.iterations_detail))
 
-    @printf(io, "\n\nSquare sum of residuals : %e", objective_value(model)) 
+    @printf(io, "\n\nSquare sum of residuals................: %.7e", objective_value(model)) 
  
-    @printf(io, "\n\nNumber of function evaluations       : %4d", exec_info.nb_function_evaluations)
-    @printf(io, "\nNumber of Jacobian matrix valuations : %4d", exec_info.nb_jacobian_evaluations)
+    @printf(io, "\n\nNumber of function evaluations.........: %4d", exec_info.nb_function_evaluations)
+    @printf(io, "\nNumber of Jacobian matrix evaluations..: %4d", exec_info.nb_jacobian_evaluations)
 
-    @printf(io, "\n\nSolving time (seconds)               : %.3f\n", exec_info.solving_time)
+    @printf(io, "\n\nSolving time (seconds).................: %.3f\n", exec_info.solving_time)
 
-    println(io, "Termination status                   : $(status(model))\n\n")
+    println(io, "Termination status.....................: $(status(model))\n\n")
 end
 
 function print_diagnosis(model::CnlsModel, io::IO=stdout)
     exec_info = model.model_info
-    print_header(model.nb_residuals, model.nb_parameters, model.nb_eqcons, total_nb_constraints(model), model.constraints_scaling, io)
+    print_header(model, io)
     println(io, "\nIteration steps information\n")   
     println(io, "iter    objective   ||active_constraints||²  ||p||       α     reduction")
     for (k, detail_iter_k) in enumerate(exec_info.iterations_detail)
