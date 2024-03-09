@@ -368,7 +368,7 @@ function newton_search_direction(
         b = -active_cx[F_A.p]
         p1 = LowerTriangular(F_A.R') \ b
     elseif t > rankA
-        b = -F_L11.Q' * active_cx[F_A.p]
+        b = F_L11.Q' * (-active_cx[F_A.p])
         δp1 = UpperTriangular(F_L11.R[1:rankA, 1:rankA]) \ b[1:rankA]
         p1 = F_L11.P[1:rankA, 1:rankA] * δp1
     end
@@ -412,7 +412,7 @@ function newton_search_direction(
         p2 = chol_W22.U \ y
         p = F_A.Q * [p1; p2]
     else
-        p = zeros(n)
+        p = zeros(T, n)
         error = true
     end
     return p, error
@@ -461,7 +461,7 @@ function first_lagrange_mult_estimate!(
     cx::Vector{T},
     scaling_done::Bool,
     diag_scale::Vector{T},
-    F::Factorization{T},
+    F::Factorization,
     iter::Iteration,
     ε_rank::T) where {T} 
 
@@ -536,7 +536,6 @@ function minmax_lagrangian_mult(
     active_C::Constraint) where {T}
     
     # Data
-
     q,t = working_set.q, working_set.t
     scaling = active_C.scaling
     diag_scale = active_C.diag_scale
@@ -572,8 +571,7 @@ function check_constraint_deletion(
     scaling::Bool,
     diag_scale::Vector{T},
     grad_res::T) where {T}
-
-      
+  
     t = size(A, 1)
     δ = 10.0
     τ = 0.5
@@ -616,50 +614,12 @@ function evaluate_violated_constraints(
             if cx[k] < ε || (k == index_α_upp && cx[k] < δ)
                 add_constraint!(W, i)
                 added = true
-                if added
-                end
             else
                 i += 1
             end
         end
     end
     return added
-end
-
-# Updates QR factorisation of A^T by appyling Givens rotations
-
-function update_QR_A(A::Matrix{T}) where {T}
-    (t,n) = size(A)
-    F_A = qr(A', ColumnNorm()) 
-    Q1 = F_A.Q*Matrix(I,n,n)
-    L11, P1 = Matrix(F_A.R'), F_A.P
-    return P1, L11, Q1
-end
-
-function update_QR_A(
-    Q::Matrix{T},
-    R::Matrix{T},
-    p::Vector{Int},
-    s::Int,
-    t::Int) where {T}
-
-    # Update permutation vector, form permutation matrix, delete j-th column of matrix R 
-    j = p[s]
-    setdiff!(p, j)
-    p[:] = [(e > j ? e - 1 : e) for e in p] 
-    P = (1.0*Matrix(I, t, t))[:, p]
-
-    R_temp = R[:, setdiff(1:end, j)]
-
-    # Apply Givens rotations to transform R to Upper triangular form
-
-    for i = j:t
-        G, r = givens(-R_temp[i, i], -R_temp[i+1, i], i, i + 1)
-        lmul!(G, R_temp)
-        rmul!(Q, G')
-    end
-
-    return P, Matrix(transpose(R_temp[1:t, 1:t])), Q, p
 end
 
 
@@ -1259,7 +1219,7 @@ function search_direction_analys(
     elseif method_code == -1
         JQ1 = J * F_A.Q
         J1 = JQ1[:, 1:rankA]
-        b = -F_L11.Q' * active_cx[F_A.p]
+        b = F_L11.Q' * (-active_cx[F_A.p])
         dimA, dimJ2 = choose_subspace_dimensions(rx_sum, rx, active_cx_sum, J1, working_set.t, rankJ2, rankA, b, F_L11, F_J2, previous_iter, restart)
         p, b, d = sub_search_direction(J1, rx, active_cx, F_A, F_L11, F_J2, n, working_set.t, rankA, dimA, dimJ2, method_code)
         if dimA == rankA && dimJ2 == rankJ2
@@ -1452,7 +1412,7 @@ function euclidean_norm_weight_update(
         if (ztw >= μ) && (dimA < t)
 
             # if ztw ≧ μ, no need to change w_old unless t = dimA
-            y = zeros(t)
+            y = zeros(T, t)
             # Form vector y and scalar γ (\gamma)
             # pos_index holds indeces for the y_i > 0
             ctrl, nb_pos, γ = 2, 0, 0.0
@@ -1559,7 +1519,6 @@ function penalty_weight_update(
     δ = 0.25
     active = work_set.active
     t = work_set.t
-
 
     nrm_Ap = sqrt(dot(Ap, Ap))
     nrm_cx = (isempty(cx[active[1:dimA]]) ? 0.0 : max(0,maximum(map(abs,cx[active[1:dimA]]))))
@@ -2224,7 +2183,6 @@ function compute_steplength(
         active_Ap = active_Ap ./ active_constraint.diag_scale
     end
     
-
     Ψ_error = 0
     if method_code != 2
         # Compute penalty weights and derivative of ψ at α = 0
@@ -2282,7 +2240,6 @@ function compute_steplength(
         index_α_upp = 0
         α = 1.0
     end
-    
     return α, w, Ψ_error
 end
 
@@ -2314,8 +2271,6 @@ function check_derivatives(
 
     return exit
 end
-
-
 
 function evaluation_restart!(iter::Iteration, error_code::Int)
     iter.restart = (error_code < 0)
@@ -2437,9 +2392,6 @@ function check_termination_criteria(
             necessary_crit = necessary_crit && (sigmin >= ε_rel * factor)
         end
 
-
-        
-        
         if necessary_crit
             # Check the sufficient conditions
             d1 = @view iter.d_gn[1:iter.dimJ2]
@@ -2729,6 +2681,7 @@ function enlsip(x0::Vector{T},
 
         # Analys of the lastly computed search direction
         error_code = search_direction_analys(previous_iter, iter, nb_iteration, x, c, r, rx, cx, active_C, active_cx_sum, p_gn, J, working_set,F_A, F_L11, F_J2)
+        
         # Computation of penalty constants and steplentgh
         α, w, Ψ_error = compute_steplength(iter, previous_iter, x, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
         iter.α = α
