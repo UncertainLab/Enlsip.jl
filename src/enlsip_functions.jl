@@ -259,7 +259,7 @@ function hessian_res!(
         f1, f2, f3, f4 = zeros(T,m), zeros(T,m), zeros(T,m), zeros(T,m)
         res_eval!(r,x + ε_j * e_j + ε_k * e_k, f1)
         res_eval!(r,x - ε_j * e_j + ε_k * e_k, f2)
-        res_eval(r,x + ε_j * e_j - ε_k * e_k,f3)
+        res_eval!(r,x + ε_j * e_j - ε_k * e_k, f3)
         res_eval!(r,x - ε_j * e_j - ε_k * e_k, f4)
         
 
@@ -2237,7 +2237,7 @@ function compute_steplength(
 
         w = w_old
         α_upp = 3.0
-        index_α_upp = 0
+        iter.index_α_upp = 0
         α = 1.0
     end
     return α, w, Ψ_error
