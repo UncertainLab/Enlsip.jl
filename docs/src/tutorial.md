@@ -43,10 +43,10 @@ The three following positional arguments are mandatory to create a model:
 * `nb_parameters` : number of variables
 * `nb_residuals` : number of residuals
 
-The following keywords arguments are optional and deal with constraints and Jacobian matrices. 
-If the Jacobian matrices functions are not provided, they are computed numerically by forward differences using automatic differenciation[^1].
+The following keywords arguments are optional and deal with constraints and Jacobian matrices.
+If the Jacobian matrices functions are not provided, they are computed numerically by forward differences using automatic differenciation[^Backend].
 
-[^1]: `ForwardDiff.jl` [https://juliadiff.org/ForwardDiff.jl/stable/](https://juliadiff.org/ForwardDiff.jl/stable/)
+[^Backend]: `ForwardDiff.jl` [https://juliadiff.org/ForwardDiff.jl/stable/](https://juliadiff.org/ForwardDiff.jl/stable/)
 
  Argument             | Details
 :---------------------|:----------------------------------------------
@@ -65,7 +65,7 @@ It is assumed that the the different functions passed as arguments of the `CnlsM
 
 ## [Solving a model](@id Solving a model)
 
-Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model.
+Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. By default, the tolerance used in the algorithm is the square root of the relative precision on floating point numbers. For instance, with `Float64`, it will approximately equal `1e-8`.
 
 ```@docs
 Enlsip.solve!
@@ -90,7 +90,6 @@ One can get additional info about termination of the algorithm by calling one of
 [`status`](@ref)             |
 [`constraints_values`](@ref) |
 [`objective_value`](@ref)    |
-
 
 ```@docs
 Enlsip.solution
@@ -139,7 +138,7 @@ nb_constraints = 7 # number of inequality constraints
 nothing # hide
 ```
 
-Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point. In this example, we use the 
+Then, we define the functions required to compute the residuals, constraints, their respective jacobian matrices and a starting point. In this example, we use the
 starting point given in the reference[^HS80], i.e. $(-5, 5, 0)$
 
 ```@example tutorial
@@ -198,6 +197,18 @@ hs65_solution = Enlsip.solution(hs65_model)
 
 ```@example tutorial
 hs65_objective = Enlsip.objective_value(hs65_model)
+```
+
+The solution obtained is relatively close to the expected optimal solution, although it differs from more than the tolerance used.
+
+```@example tutorial
+maximum(abs.(hs65_solution - [3.650461821, 3.65046168, 4.6204170507])) < sqrt(eps(Float64))
+```
+
+However, the difference between the objective value obtained with `Enlsip` and the expected one does not exceed the default tolerance.
+
+```@example tutorial
+abs(hs65_objective - 0.9535288567) < sqrt(eps(Float64))
 ```
 
 [^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

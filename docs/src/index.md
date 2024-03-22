@@ -4,7 +4,7 @@
 
 Package `Enlsip.jl` is the Julia version of an eponymous Fortran77 library (ENLSIP standing for Easy Nonlinear Least Squares Inequalities Program) designed to solve nonlinear least squares problems under nonlinear constraints.
 
-The optimization method implemented in `Enlsip.jl` was conceived in the early 1980s by two swedish authors named Per Lindström and Per Åke Wedin [^LW88].
+The optimization method implemented in `Enlsip.jl` was conceived in the early 1980s by two Swedish authors named Per Lindström and Per Åke Wedin [^LW88].
 
 It is designed for solve nonlinear least squares problems subject to (s.t.) nonlinear constraints, which can be modeled as the following optimization problem:
 
@@ -36,7 +36,7 @@ Pkg.add("Enlsip")
 
 Using `Enlsip.jl` to solve optimization problems consists in, first, instantiating a model and then call the solver on it.
 
-Details and examples with problems from the literature in the [Usage](@ref) page.
+Details and examples with problems from the literature can be found in the [Usage](@ref) page.
 
 ## Description of the algorithm
 
@@ -69,7 +69,7 @@ The subproblem is then solved by a null-space type method.
 
 ### Steplength
 
-The steplength aims to maintain feasability of all of the constraints and to reduce the value of the objective function. In `Enlsip.jl`, this process involves an $\ell_2$-type merit function:
+The steplength aims to maintain feasibility  of all of the constraints and to reduce the value of the objective function. In `Enlsip.jl`, this process involves an $\ell_2$-type merit function:
 
 $$\psi_2(x, \mu_k) = \dfrac{1}{2} \|r(x)\|^2 +  \mu_k \sum_{i\in\mathcal{E}} c_i(x)^2+  \mu_k \sum_{i\in\mathcal{I}}  \min(0,c_i(x))^2,$$
 
@@ -79,11 +79,11 @@ Steplength computation is performed by applying a linesearch method on function 
 
 $$\alpha_k \in \arg\min_{\alpha \in [0,1]} \psi_2(x_k+\alpha_kp_k, \mu_k).$$
 
-The authors of the Fortran77 version of ENLSIP developped a linesearch method in which an approximate, but acceptable, minimizer of the merit function is computed[^LW84].
+The authors of the Fortran77 version of ENLSIP developed a linesearch method in which an approximate, but acceptable, minimizer of the merit function is computed[^LW84].
 
 ### Convergence
 
-To our knowledge, there is no proof of convergence of the method described above, though local convergence with a linear rate should be expected from the Gauss-Newton paradigm, provided that the initial point is close enought to the solution and that the optimal active does not change. Numerical tests confirmed that the efficiency of the method is influenced by the initial point.
+To our knowledge, there is no proof of convergence of the method described above, though local convergence with a linear rate should be expected from the Gauss-Newton paradigm, provided that the initial point is close enough to the solution and that the optimal active does not change. Numerical tests confirmed that the efficiency of the method is influenced by the initial point.
 
 ## Bug reports and contributions
 
