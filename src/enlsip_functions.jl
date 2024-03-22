@@ -2455,7 +2455,7 @@ function print_header(model::CnlsModel, io::IO=stdout)
     println(io, '*'^64)
     println(io, "*",' '^62,"*")
 
-    println(io, "*"," "^23,"Enlsip.jl v0.9.2"," "^23,"*")
+    println(io, "*"," "^23,"Enlsip.jl v0.9.3"," "^23,"*")
     println(io, "*",' '^62,"*")
     println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
     println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
