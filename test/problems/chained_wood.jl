@@ -34,5 +34,5 @@
     CW_model = CnlsModel(r,n,m; starting_point=x0, eq_constraints=c, nb_eqcons=nb_eq)
     solve!(CW_model)
     
-    @test status(Cw_model) in values(dict_status_codes)
+    @test status(CW_model) in values(dict_status_codes)
 end
