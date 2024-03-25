@@ -2366,7 +2366,8 @@ function check_termination_criteria(
     Ψ_error::Int) where {T}
 
     exit_code = 0
-    alfnoi = ε_rel / (norm(iter.p) + ε_abs)
+    rel_tol = eps(T)
+    alfnoi = rel_tol / (norm(iter.p) + rel_tol)
 
     # Preliminary conditions
     preliminary_cond = !(iter.restart || (iter.code == -1 && alfnoi <= 0.25))
