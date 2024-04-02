@@ -35,12 +35,12 @@ This type of problems is mathematically formulated as:
 \begin{equation}\label{eq:cnlls}
          \quad \begin{aligned}  
                         \quad	\min_{x \in \mathbb{R}^n}        \quad&  \dfrac{1}{2} \sum_{i=1}^{m} r_i(x)^2  \\
-                        \text{s.t.}      \quad & c_i(x)=0, \quad i \in \mathcal{E}\\
-                        & c_i(x) \geq 0, \quad i\in\mathcal{I},
+                        \text{s.t.}      \quad & c_i(x)=0, \quad i =1,\ldots,q\\
+                        & c_i(x) \geq 0, \quad i=q+1,\ldots,\ell,
         \end{aligned}
 \end{equation}
 
-where the $m$ functions $r_i$, often denoted as the residuals, and constraints $c_i$ are two-times differentiable functions.
+where the functions $(r_1,\ldots,r_m)$, often denoted as the residuals, and constraints $(c_1,\ldots,c_\ell)$ are two-times differentiable.
 
 This package is the Julia version of ``ENLSIP`` (Easy Nonlinear Least Squares Inequality Program), an open-source Fortran77 library developed by @lindstromwedin1988[^1].
 
@@ -50,7 +50,7 @@ This package is the Julia version of ``ENLSIP`` (Easy Nonlinear Least Squares In
 
 The ``ENLSIP`` Fortran77 library has been successfully used since the early 2000s by Hydro-Québec, the main electricity supplier for the province of Quebec in Canada, to calibrate its short-term electricity demand forecast models [@grenieretal:2006], which are coded in Fortran90. Since Hydro-Québec is transitioning from Fortran77 to Julia and because its systems are used in a highly critical context, the primary goal of this transition is to ensure that the replacing Julia version reproduces the results given by the original Fortran77 version. The conversion of the above-mentioned ``ENLSIP`` library to Julia is a crucial part of this process.
 
-Nonlinear least squares arise in a variety of model calibration scenarios. Formulation \eqref{eq:cnlls} is particularly relevant in contexts where additional constraints, such as those related to physical models, need to be satisfied. This is due to the high-risk nature of Hydro-Québec's forecasting operations. Moreover, the specific structure of this type of problems can be exploited to design algorithms more efficient than solvers for general nonlinear programming.
+Nonlinear least squares arise in a variety of model calibration scenarios. Formulation \eqref{eq:cnlls} is particularly relevant in contexts where additional constraints, such as those related to physical models, need to be satisfied. This is due to the high-risk nature of Hydro-Québec's forecasting operations. Moreover, the specific structure of the objective function in \eqref{eq:cnlls} can be exploited to design algorithms more efficient than solvers for general nonlinear programming.
 
 Comparison of results and performance on operational Hydro-Québec optimization problems have been conducted using a Julia-Fortran interface and they have shown very good concordance results. We additionally compared numerical results on nonlinear programming test problems [@hockschittkowski:1980; @lucksanvlcek:1999] to ascertain whether the two versions could yield significantly disparate outcomes or distinct solutions. On the tested problems, we observed no differences in convergence behavior. Furthermore, the obtained solutions did not differ from a predetermined tolerance, the same one we previously employed to ensure the results of our Julia version were consistent with the requirements of Hydro-Québec. This has led us to consider that the current version of our implementation can be published as a registered Julia package.
 
@@ -58,7 +58,7 @@ Comparison of results and performance on operational Hydro-Québec optimization 
 
 The ``ENLSIP`` solver incorporates an iterative Gauss-Newton method. At each iteration, the algorithm solves an approximation of the original problem \eqref{eq:cnlls} obtained by first linearizing both residuals and constraints in a small neighborhood of the current point. Then, a subset of constraints is formed with all the equality constraints and some inequality constraints that are then treated as equalities for the ongoing iteration. The strategy implemented by the authors to select the appropriate inequality constraints at each iteration follows the principles exposed in chapter 6 of @gillmurraywright:1985. This results in a subproblem with a linear least-squares objective and linear equality constraints that is solved with a null-space type method [@nocedalwright:2006, chapter 15].
 
-To our knowledge, there is no proof of convergence for the method in ENLSIP, although local convergence at a linear rate can be expected from the Gauss-Newton paradigm. In practice, the algorithm performs better when the starting point is relatively close to a solution of the problem.
+To our knowledge, there is no proof of convergence for the method implemented in ENLSIP, although local convergence at a linear rate can be expected from the Gauss-Newton paradigm. In practice, the algorithm performs better when the starting point is relatively close to a solution of the problem. However, the algorithm is not designed for large scale least squares. Performance tend, indeed, to deteriorate on problems with a few hundreds of parameters and constraints $(n+\ell \geq 200)$ and more than a thousand residuals $(m\geq 1000)$.
 
 ## From Fortran77 to Julia
 
@@ -73,17 +73,18 @@ Performances of the two versions were compared using problems derived from Hydro
 - from 468 to 716 total constraints (with 2 to 10 equalities)
 - from 4392 to 17,568 residuals.
 
-Since the organization of computations can differ from Fortran77 to Julia, especially for linear algebra, small numerical differences were likely to appear and accumulate, leading to slightly different outcomes or total number of iterations.
-Among the 90 instances, 36 stopped failed to converge or stopped due to a numerical error for either one the two versions of ``ENLSIP``. For the 64 remaining, both versions reached similar solutions with respect to Hydro-Québec specifications. Though those values can not be given in this paper, the performance profiles in figure \ref{fig:perf_profile} seem to show that our Julia version has similar, if not better, performances than the Fortran77 version. These results must be weighted by the number of iterations performed by the two algorithms. Indeed, our Julia version performs in general less iterations, which contributes to a lower computation time.
+Due to the differences in how computations are organized between Fortran77 and Julia, especially in linear algebra, minor numerical discrepancies were expected to emerge and accumulate, leading to slightly different outcomes or total number of iterations performed.
 
-![Performance comparison of ENLSIP-Fortran77 (purple) and Enlsip.jl (green) on 64 instances of the CM1 model calibration.\label{fig:perf_profile}](figures/dylanmore_cm1.png){ width=80% }
+Out of 90 instances, 26 either failed to converge or stopped due to a numerical error occuring during the execution of one of the two versions of ``ENLSIP``. For the remaining 64 instances, both versions reached similar solutions that met Hydro-Québec specifications. Although specific values cannot be disclosed in this paper, the performance profiles in figure \ref{fig:perf_profile} seem to show that our Julia version has similar, if not better, performances than the Fortran77 version. However, these results must be weighted by the number of iterations performed by the two algorithms. Indeed, our Julia version generally required less iterations, which contributed to reduced computation times.
+
+![Performance comparison of ENLSIP-Fortran77 (purple) and Enlsip.jl (green) on 64 instances of the CM1 model calibration.\label{fig:perf_profile}](figures/pp_cm1.png){ width=80% }
 
 ## Other nonlinear least-squares packages
 
 Several existing Julia packages can be used to solve nonlinear least-squares problems, such as [NL2sol.jl](https://github.com/macd/NL2sol.jl), [LsqFit.jl](https://github.com/JuliaNLSolvers/LsqFit.jl) and [LeastSquaresOptim.jl](https://github.com/matthieugomez/LeastSquaresOptim.jl), for unconstrained and bound constrained problems, or [CaNNOLeS.jl](https://github.com/JuliaSmoothOptimizers/CaNNOLeS.jl) for equality constrained problems. However, they do not entirely cover the formulation stated in \eqref{eq:cnlls}, for which general solvers such as [Ipopt.jl](https://github.com/jump-dev/Ipopt.jl) can be used efficiently.
 
-Although our package may not benefit from state-of-the-art least-squares and nonlinear optimization improvements, its use remains relevant.
-Indeed, the method in ``ENLSIP`` exploits the least-squares structure and its application remains also very general, covering nonlinearity and non-convexity of the residuals and constraints. Compared to other categories, like the unconstrained case [as discussed in @dennisschnabel:1996, chapter 10], this specific class of least-squares problems with general constraints is, to the best of our knowledge, rarely addressed in the literature.
+Although our package may not incorporate the latest advancements in least squares and nonlinear optimization, especially for large-scale problems, its use remains relevant.
+Indeed, the method employed ``ENLSIP`` manages to exploit the least-squares structure while also remaining very general, covering nonlinearity and non-convexity of the residuals and constraints. This capability renders it an effective tool for solving problems of reasonable dimensions ($n\leq 500$ and $m\leq 1000$). Moreover, in comparison to other categories, like the unconstrained case [as discussed in @dennisschnabel:1996, chapter 10], this specific class of least squares with general constraints is, to the best of our knowledge, rarely addressed in the literature.
 
 # Usage
 
@@ -96,7 +97,7 @@ Pkg.add("Enlsip")
 
 The package provides a basic interface for modeling optimization problems of the form \eqref{eq:cnlls}, by passing the residuals, constraints functions and dimensions of the problem.
 This is accomplished by creating an instance of our `CnlsModel` structure.
-Users can also provide functions to compute Jacobian matrices of residuals and constraints, or they can let the algorithm compute them numerically using automatic differention [@griewank:2003][^AD].
+Users can also provide functions to compute Jacobian matrices of residuals and constraints, or they can let the algorithm compute them numerically using automatic differentiation [@griewank:2003][^AD].
 
 [^AD]: Backend used by default is [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/)
 
