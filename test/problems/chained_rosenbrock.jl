@@ -8,7 +8,7 @@
     function r(x::Vector)
         n = length(x)
         m = 2(n-1)
-        rx = Vector(undef,m)
+        rx = Vector{eltype(x)}(undef,m)
         rx[1:n-1] = [10(x[i]^2 - x[i+1]) for i=1:n-1]
         rx[n:m] = [x[k-n+1] - 1 for k=n:m]
         return rx
@@ -52,10 +52,8 @@
     
     x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n]
 
-    Crmodel = CnlsModel(r,n,m ;starting_point=x0, jacobian_residuals=jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
-
-    CR_sol = solve!(Crmodel)
-
+    Crmodel = CnlsModel(r,n,m; starting_point=x0, jacobian_residuals = jac_res, eq_constraints=c, jacobian_eqcons=jac_cons, nb_eqcons=nb_eq)
+    solve!(Crmodel)
 
     @test size(x0,1) == Crmodel.nb_parameters
     @test r(x0) ≈ Crmodel.residuals(x0)
@@ -66,7 +64,5 @@
     @test nb_constraints == total_nb_constraints(Crmodel)
     @test status(Crmodel) in values(dict_status_codes)
     @test typeof(solution(Crmodel)) <: Vector && size(solution(Crmodel),1) == n
-    @test typeof(objective_value(Crmodel)) <: Number && isfinite(objective_value(Crmodel))
-  
-    
+    @test typeof(objective_value(Crmodel)) <: Number && isfinite(objective_value(Crmodel))  
 end

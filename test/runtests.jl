@@ -1,6 +1,11 @@
 using Enlsip
 using Test
 
- 
-include("chained_rosenbrock.jl")
-include("HS65.jl")
+
+include("internal/working_set.jl")
+include("internal/constraints.jl") 
+include("problems/HS65.jl")
+include("problems/osborne2.jl")
+include("problems/chained_rosenbrock.jl")
+include("problems/chained_wood.jl")
+

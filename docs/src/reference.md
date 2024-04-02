@@ -1,6 +1,5 @@
 # [Reference](@id Reference)
 
-
 ## Index
 
 ```@index

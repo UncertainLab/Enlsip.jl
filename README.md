@@ -1,9 +1,6 @@
 # Enlsip.jl
 
-
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/)
-
-
+[![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/) 
 
 Package `Enlsip.jl` is the Julia version of an optimization library originally written in Fortran77 and designed to solve nonlinear least squares problems under nonlinear constraints.
  The optimization method implemented in Enlsip was conceived by two swedish authors, Per Lindstrom and Per Ake Wedin from the Institute of Informatation processing of the University of Umea in Sweden.
@@ -12,14 +9,16 @@ Problems that can be solved using Enlsip are modeled as follows:
 
 ```math
 \begin{aligned}
-\min \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
-\text{s.t.} \quad & c_i(x) = 0, \quad i =1,\ldots,q \\
-& c_j(x) \geq 0, \quad j=q+1,\ldots,\ell, \\
+\min_{x \in \mathbb{R}^n} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
+\text{s.t.} \quad & c_i(x) = 0, \quad i \in \mathcal{E} \\
+& c_i(x) \geq 0, \quad i \in \mathcal{I}, \\
 \end{aligned}
 ```
 
-where $r:\mathbb{R}^n\rightarrow\mathbb{R}^m$, the residuals, and
-$c:\mathbb{R}^n\rightarrow\mathbb{R}^{q+\ell}$, concatenation of the constraints, are $\mathcal{C}^1$ multi-functions.
+where:
+
+* the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ are assumed to be $\mathcal{C}^2$ functions;
+* norm $\|\cdot\|$ denotes the Euclidean norm.
 
 Note that box constraints are modeled as general inequality constraints.
 
@@ -69,7 +68,6 @@ An object of type `CnlsModel` can be created using a constructor, whose argument
 ### Solving a model
 
 Then, once your model is instantiated, you can call the `solve!` function to solve your problem.
-
 
 ### Example with problem 65 from  Hock Schittkowski collection
 

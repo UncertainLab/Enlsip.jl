@@ -14,5 +14,5 @@ makedocs(
 
 deploydocs(
     repo = "github.com/UncertainLab/Enlsip.jl.git",
-    devbranch = "master"
+    devbranch = "main"
 )

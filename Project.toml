@@ -1,18 +1,18 @@
 name = "Enlsip"
 uuid = "d5306a6b-d590-428d-a53a-eb3bb2d36f2d"
 authors = ["pierre-borie"]
-version = "0.9.1"
+version = "0.9.3"
 
 [deps]
-Formatting = "59287772-0a20-5a39-b81b-1366585eb4c0"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [compat]
+ForwardDiff = "^0.10.36"
+Polynomials = "^4.0.6"
 julia = "^1.8.0"
-Polynomials = "3.2.13"
-Formatting = "0.4.2"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

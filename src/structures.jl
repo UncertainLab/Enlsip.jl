@@ -1,10 +1,16 @@
+#=
+    AbstractIteration{T<:AbstractFloat} 
 
+Abstract type for later types defined to store data about an iteration of the Enlsip algorithm
+=#
+
+abstract type AbstractIteration{T<:AbstractFloat} end
 
 #=
 
-    Iteration
+    Iteration{T} <: AbstractIteration
 
-Summarizes the useful informations about an iteration of the algorithm
+Summarizes the useful informations about an iteration of the Enlsip algorithm
 
 * `x` : Departure point of the iteration 
 
@@ -54,39 +60,65 @@ Summarizes the useful informations about an iteration of the algorithm
 
 * `nb_newton_steps` : number of search direction computed using the method of Newton
 =#
-mutable struct Iteration
-    x::Vector
-    p::Vector
-    rx::Vector
-    cx::Vector
-    t::Int64
-    α::Float64
-    index_α_upp::Int64
-    λ::Vector
-    w::Vector
-    rankA::Int64
-    rankJ2::Int64
-    dimA::Int64
-    dimJ2::Int64
-    b_gn::Vector
-    d_gn::Vector
-    predicted_reduction::Float64
-    progress::Float64
-    grad_res::Float64
-    speed::Float64
-    β::Float64
+mutable struct Iteration{T} <: AbstractIteration{T}
+    x::Vector{T}
+    p::Vector{T}
+    rx::Vector{T}
+    cx::Vector{T}
+    t::Int
+    α::T
+    index_α_upp::Int
+    λ::Vector{T}
+    w::Vector{T}
+    rankA::Int
+    rankJ2::Int
+    dimA::Int
+    dimJ2::Int
+    b_gn::Vector{T}
+    d_gn::Vector{T}
+    predicted_reduction::T
+    progress::T
+    grad_res::T
+    speed::T
+    β::T
     restart::Bool
     first::Bool
     add::Bool
     del::Bool
-    index_del::Int64
-    code::Int64
-    nb_newton_steps::Int64
+    index_del::Int
+    code::Int
+    nb_newton_steps::Int
 end
 
 
 Base.copy(s::Iteration) = Iteration(s.x, s.p, s.rx, s.cx, s.t, s.α, s.index_α_upp, s.λ, s.w, s.rankA, s.rankJ2, s.dimA, s.dimJ2, s.b_gn, s.d_gn, 
 s.predicted_reduction, s.progress, s.grad_res, s.speed, s.β, s.restart, s.first, s.add, s.del, s.index_del, s.code, s.nb_newton_steps)
+
+
+#=
+    DisplayedInfo{T}
+
+Contains the specific data on an iteration of Enlsip that are to be displayed in the execution details
+
+* objective : value of the objective function, i.e. sum of squared residuals
+
+* sqr_nrm_act_cons : sum of squared active constraints
+
+* nrm_p : norm of the search direction
+
+* α : value of steplength
+
+* reduction : reduction of the objective function at the end of the iteration
+=#
+struct DisplayedInfo{T} <: AbstractIteration{T}
+    objective::T
+    sqr_nrm_act_cons::T
+    nrm_p::T
+    α::T
+    reduction::T
+end
+
+ DisplayedInfo() = DisplayedInfo(0.0, 0.0, 0.0, 0.0, 0.0)
 
 #=
     Constraint
@@ -106,11 +138,11 @@ Fields are the useful informations about active constraints at a point x :
     - The i-th element equals ``\\dfrac{1}{\\|\\nabla c_i(x)\\|}`` for ``i = 1,...,t``, which is the inverse of the length of `A` i-th row 
     - Otherwise, it contains the length of each row in the matrix `A`
 =#
-mutable struct Constraint
-    cx::Vector{Float64}
-    A::Matrix{Float64}
+mutable struct Constraint{T<:AbstractFloat}
+    cx::Vector{T}
+    A::Matrix{T}
     scaling::Bool
-    diag_scale::Vector{Float64}
+    diag_scale::Vector{T}
 end
 
 
@@ -171,17 +203,31 @@ Fields of this structure summarize infos about the qualification of the constrai
 
 =#
 mutable struct WorkingSet
-    q::Int64
-    t::Int64
-    l::Int64
-    active::Vector{Int64}
-    inactive::Vector{Int64}
+    q::Int
+    t::Int
+    l::Int
+    active::Vector{Int}
+    inactive::Vector{Int}
+end
+
+#= Constructot for WorkingSet
+    q : Number of equality constraints
+    l : Number of inequality constraints
+    Initial acticve set contains all equality constraints indices
+    Initial inactive set contains all inequality constraints indices
+=#
+function WorkingSet(q::Int, l::Int)
+    active = zeros(Int, l)
+    inactive = zeros(Int, l-q)
+    active[1:q] = [i for i=1:q]
+    inactive[:] = [i for i=q+1:l]
+    return WorkingSet(q, q, l, active, inactive)
 end
 
 # Equivalent Fortran : DELETE in dblreduns.f
 # Moves the active constraint number s to the inactive set
 
-function delete_constraint!(W::WorkingSet, s::Int64)
+function remove_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
 
@@ -199,9 +245,9 @@ function delete_constraint!(W::WorkingSet, s::Int64)
 end
 
 # Equivalent Fortran : ADDIT in dblreduns.f
-# Add the inactive constraint nulber s to the active s
+# Add the inactive constraint number s to the active set
 
-function add_constraint!(W::WorkingSet, s::Int64)
+function add_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
     # s-th inactive constraint moved from inactive to active set
