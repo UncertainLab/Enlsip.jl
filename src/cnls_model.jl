@@ -189,7 +189,7 @@ end
 
 const dict_status_codes = Dict(
     0 => :unsolved,
-    1 => :successfully_solved,
+    1 => :found_first_order_stationary_point,
     -1 => :failed,
     -2 => :maximum_iterations_exceeded,
 )
@@ -202,7 +202,7 @@ This functions returns a `Symbol` that gives brief information on the solving st
 
 If a model has been instantiated but the solver has not been called yet, it will return `:unsolved`.
 
-Once the solver has been called and if a first order critical point satisfying the convergence criteria has been computed, it will return `:successfully_solved`.
+Once the solver has been called and if a first order stationary point satisfying the convergence criteria has been computed, it will return `:found_first_order_stationary_point`.
 
 If the algorithm met an abnormall termination criteria, it will return one of the following:
 
@@ -242,7 +242,7 @@ Returns the total number of constraints, i.e. equalities, inequalities and bound
 
 See also: [`CnlsModel`](@ref).
 """
-total_nb_constraints(model::CnlsModel) = model.nb_eqcons + model.nb_ineqcons + count(isfinite, model.x_low) + count(isfinite, model.x_upp)
+total_nb_constraints(model::CnlsModel) = nb_equality_constraints(model) + nb_inequality_constraints(model) + nb_lower_bounds(model) + nb_upper_bounds(model)
 
 
 """
@@ -252,9 +252,9 @@ Returns the vector of equality constraints values at the solution of `model` (if
 """
 function equality_constraints_values(model::CnlsModel)
     sol = solution(model)
-    hx = Vector{eltype(sol)}([])
+    hx = Vector{eltype(sol)}(undef, nb_equality_constraints(model))
     if model.eq_constraints !== nothing
-        hx = model.eq_constraints(sol)
+        hx[:] = model.eq_constraints(sol)
     end
     return hx
 end
@@ -266,9 +266,9 @@ Returns the vector of inequality constraints values at the solution of `model` (
 """
 function inequality_constraints_values(model::CnlsModel)
     sol = solution(model)
-    gx = Vector{eltype(sol)}([])
+    gx = Vector{eltype(sol)}(undef, nb_inequality_constraints(model))
     if model.ineq_constraints !== nothing
-        gx = model.ineq_constraints(sol)
+        gx[:] = model.ineq_constraints(sol)
     end
     return gx
 end

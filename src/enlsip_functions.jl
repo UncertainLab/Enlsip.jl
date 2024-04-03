@@ -141,7 +141,7 @@ function sub_search_direction(
         b_buff = -cx[F_A.p]
         b = F_L11.Q' * b_buff
         δp1 = UpperTriangular(F_L11.R[1:dimA, 1:dimA]) \ b[1:dimA]
-        p1 = ([δp1; zeros(t - dimA)][invperm(F_L11.p)])[1:rankA]
+        p1 = ([δp1; zeros(T,t - dimA)][invperm(F_L11.p)])[1:rankA]
         d_temp = -J1 * p1 - rx
         d = F_J2.Q' * d_temp
         δp2 = UpperTriangular(F_J2.R[1:dimJ2, 1:dimJ2]) \ d[1:dimJ2]
@@ -970,7 +970,7 @@ function check_gn_direction(
         to_reduce = false
         if W.q < W.t
             sqr_ε = sqrt(eps(eltype(λ)))
-            rows = zeros(W.t - W.q)
+            rows = zeros(T, W.t - W.q)
             for i = W.q+1:W.t
                 rows[i-W.q] = (scaling ? 1.0 / diag_scale[i] : diag_scale[i])
             end
@@ -1029,7 +1029,7 @@ function determine_solving_dim(
     mindim = 1
 
     if rankR > 0
-        l_estim_sd, l_estim_righthand = zeros(rankR), zeros(rankR)
+        l_estim_sd, l_estim_righthand = zeros(T,rankR), zeros(T,rankR)
         l_estim_sd[1] = abs(y[1])
         l_estim_righthand[1] = abs(y[1] / R[1, 1])
 
@@ -1113,7 +1113,8 @@ function choose_subspace_dimensions(
         d = -rx
 
     elseif rankA > 0
-        previous_dimA = abs(previous_iter.rankA) + t - previous_iter.t
+        # previous_dimA = abs(previous_iter.rankA) + t - previous_iter.t
+        previous_dimA = abs(previous_iter.dimA) + t - previous_iter.t
         nrm_b_asprev = norm(b[1:previous_dimA])
         nrm_b = norm(b)
         constraint_progress = dot(previous_iter.cx, previous_iter.cx) - active_cx_sum
@@ -1126,7 +1127,7 @@ function choose_subspace_dimensions(
         # Forms right hand side d = r(x)+J1*p1
 
         δp1 = UpperTriangular(F_L11.R[1:dimA, 1:dimA]) \ b[1:dimA]
-        p1 = F_L11.P[1:rankA, 1:rankA] * [δp1; zeros(rankA - dimA)]
+        p1 = F_L11.P[1:rankA, 1:rankA] * [δp1; zeros(T,rankA - dimA)]
         d = -(rx + J1 * p1)
     end
 
@@ -1134,7 +1135,8 @@ function choose_subspace_dimensions(
         d = F_J2.Q' * d
     end
 
-    previous_dimJ2 = abs(previous_iter.rankJ2) + previous_iter.t - t
+    # previous_dimJ2 = abs(previous_iter.rankJ2) + previous_iter.t - t
+    previous_dimJ2 = abs(previous_iter.dimJ2) + previous_iter.t -t
     nrm_d_asprev = norm(d[1:previous_dimJ2])
     nrm_d = norm(d)
     residual_progress = dot(previous_iter.rx, previous_iter.rx) - rx_sum
@@ -1431,7 +1433,7 @@ function euclidean_norm_weight_update(
         elseif (ztw < μ) && (dimA < t)
 
             # Form vector e and scalar τ (\tau)
-            e = zeros(t)
+            e = zeros(T,t)
             ctrl, nb_pos, τ = 2, 0, μ
             for i = 1:t
                 k = active[i]
@@ -1643,7 +1645,7 @@ function coefficients_linesearch!(v0::Vector{T},
     # Compute v0
     concatenate!(v0, rx, cx, w, m, t, l, active, inactive)
 
-    v_buff = zeros(m + l)
+    v_buff = zeros(T,m + l)
     concatenate!(v_buff, rx_new, cx_new, w, m, t, l, active, inactive)
 
     # Computation of v2 components
@@ -1954,11 +1956,11 @@ function linesearch_constrained(
     diff_psi = ψ0 - ψ_k
 
     x_new = x + α_k * p
-    rx_new, cx_new = zeros(m), zeros(l)
+    rx_new, cx_new = zeros(T,m), zeros(T,l)
     res_eval!(r,x_new,rx_new)
     cons_eval!(c,x_new,cx_new)
 
-    v0, v2 = zeros(m + l), zeros(m + l)
+    v0, v2 = zeros(T,m + l), zeros(m + l)
     coefficients_linesearch!(v0, v1, v2, α_k, rx, cx, rx_new, cx_new, w, m, t, l, active, inactive)
 
     # Set x_min = the best of the points 0 and α0
@@ -2032,7 +2034,7 @@ function linesearch_constrained(
                 x_new = x + α_k * p
                 res_eval!(r,x_new,rx_new)
                 cons_eval!(c,x_new,cx_new)
-                v0, v2 = zeros(m + l), zeros(m + l)
+                v0, v2 = zeros(T,m + l), zeros(T,m + l)
                 coefficients_linesearch!(v0, v1, v2, α_k, rx, cx, rx_new, cx_new, w, m, t, l, active, inactive)
                 α_kp1, pk, β, pβ = minrm(v0, v1, v2, x_min, α_min, α_max)
                 if α_kp1 != β && pβ < pk && β <= α_k
@@ -2222,8 +2224,8 @@ function compute_steplength(
             # Computation of new point and actual progress
             # Evaluate residuals and constraints at the new point
         
-            rx_new = zeros(m)
-            cx_new = zeros(work_set.l)
+            rx_new = zeros(T,m)
+            cx_new = zeros(T,work_set.l)
             x_new = x + α * p
             res_eval!(r,x_new,rx_new)
             cons_eval!(c,x_new,cx_new)
@@ -2366,7 +2368,8 @@ function check_termination_criteria(
     Ψ_error::Int) where {T}
 
     exit_code = 0
-    alfnoi = ε_rel / (norm(iter.p) + ε_abs)
+    rel_tol = eps(T)
+    alfnoi = rel_tol / (norm(iter.p) + rel_tol)
 
     # Preliminary conditions
     preliminary_cond = !(iter.restart || (iter.code == -1 && alfnoi <= 0.25))
@@ -2455,7 +2458,7 @@ function print_header(model::CnlsModel, io::IO=stdout)
     println(io, '*'^64)
     println(io, "*",' '^62,"*")
 
-    println(io, "*"," "^23,"Enlsip.jl v0.9.3"," "^23,"*")
+    println(io, "*"," "^23,"Enlsip.jl v0.9.4"," "^23,"*")
     println(io, "*",' '^62,"*")
     println(io, "* This is the Julia version of the ENLSIP algorithm, initially *") 
     println(io, "* conceived and developed in Fortran77 by Per Lindstrom and    *")
@@ -2581,20 +2584,20 @@ function enlsip(x0::Vector{T},
     K = [zeros(T, l) for i = 1:4]
 
     # Evaluate residuals, constraints and jacobian matrices at starting point
-    rx, cx = zeros(m), zeros(l)
-    J, A = zeros(m, n), zeros(l, n)
+    rx, cx = zeros(T,m), zeros(T,l)
+    J, A = zeros(T,m, n), zeros(T,l, n)
     new_point!(x0, r, c, rx, cx, J, A)
     # First Iteration
     x_opt = x0
     f_opt = dot(rx, rx)
-    first_iter = Iteration(x0, zeros(n), rx, cx, l, 1.0, 0, zeros(l), zeros(l), 0, 0, 0, 0, zeros(n), zeros(n), 0.0, 0.0, 0.0, 0.0, 0.0, false, true, false, false, 0, 1, 0)
+    first_iter = Iteration(x0, zeros(T,n), rx, cx, l, 1.0, 0, zeros(T,l), zeros(T,l), 0, 0, 0, 0, zeros(T,n), zeros(T,n), 0.0, 0.0, 0.0, 0.0, 0.0, false, true, false, false, 0, 1, 0)
    
     # Initialization of the working set
     working_set = init_working_set(cx, K, first_iter, q, l)
 
     first_iter.t = working_set.t
 
-    active_C = Constraint(cx[working_set.active[1:working_set.t]], A[working_set.active[1:working_set.t], :], scaling, zeros(working_set.t))
+    active_C = Constraint(cx[working_set.active[1:working_set.t]], A[working_set.active[1:working_set.t], :], scaling, zeros(T,working_set.t))
 
     # Gradient of the objective function
     ∇fx = transpose(J) * rx
@@ -2669,7 +2672,7 @@ function enlsip(x0::Vector{T},
     while exit_code == 0
 
         # println( "\nIter $nb_iteration\n")
-        p_gn = zeros(n)
+        p_gn = zeros(T,n)
 
         # Estimation of the Lagrange multipliers
         # Computation of the Gauss-Newton search direction
