@@ -33,6 +33,9 @@ function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int=100, scaling:
     ε = eps(eltype(model.starting_point))
     sqr_ε = sqrt(ε)
     
+    # Internal scaling
+    model.constraints_scaling = scaling
+    
     # Evaluation functions
     residuals_evalfunc = (model.jacobian_residuals === nothing ? ResidualsFunction(model.residuals) : ResidualsFunction(model.residuals, model.jacobian_residuals))
 

@@ -212,3 +212,55 @@ abs(hs65_objective - 0.9535288567) < sqrt(eps(Float64))
 ```
 
 [^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.
+
+### Chained Rosenbrock problem[^LV99]
+
+[^LV99]: L. Lukšan and J. Vlček. *Sparse and Partially Separable Test Problems for Unconstrained and Equality Constrained Optimization*. Technical report 767, 1999.
+
+We now consider the following problem:
+
+```math
+\begin{aligned}
+\min_{x} \quad & \sum_{i=1}^{n-1} 100(x_i^2-x_{i+1})^2 + (x_i-1)^2 \\ 
+\text{s.t.} \quad &  3x_{k+1}^3 + 2x_{k+2}+\sin(x_{k+1}-x_{k+2})\sin(x_{k+1}+x_{k+2})+4x_{k+1} - x_k\exp(x_k-x_{k+1}) - 8 = 0 \\ 
+& k=1,\ldots, n-2,
+\end{aligned}
+```
+
+for a given natural number $n\geq 3$. In this example, we use $n=1000$. Though analytic Jacobians are easy to define, they will be passed as arguments in the model instantiation, so to let the algorithm use automatic differentiation.
+
+```@example tutorial
+# Dimensions
+n = 1000 # Number of variables
+m = 2(n-1) # Number of residuals
+nb_eq = n-2 # Number of equality constraints
+
+# Residuals
+function r(x::Vector)
+    n = length(x)
+    m = 2(n-1)
+    rx = Vector{eltype(x)}(undef,m)
+    rx[1:n-1] = [10(x[i]^2 - x[i+1]) for i=1:n-1]
+    rx[n:m] = [x[k-n+1] - 1 for k=n:m]
+    return rx
+end
+
+# Constraints
+function c(x::Vector)
+    n = length(x)
+    cx = [3x[k+1]^3 + 2x[k+2] - 5 + sin(x[k+1]-x[k+2])*sin(x[k+1]+x[k+2]) + 4x[k+1] - 
+        x[k]*exp(x[k]-x[k+1]) - 3 for k=1:n-2]
+    return cx
+end
+
+x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n] # Starting point
+
+# Instantiation of the model
+Crmodel = CnlsModel(r,n,m; starting_point=x0, eq_constraints=c, nb_eqcons=nb_eq)
+
+# Solving
+Enlsip.solve!(Crmodel)
+
+# Show solving status
+Enlsip.status(Crmodel)
+```
