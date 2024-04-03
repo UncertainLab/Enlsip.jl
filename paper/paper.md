@@ -67,7 +67,7 @@ Furthermore, this language is highly convenient for optimization, offering vario
 
 ## Numerical experiments
 
-Performances of the two versions were compared using problems derived from Hydro-Québec operations. The use case considered consists in estimating the parameters of CM1 (Carole Mercier 1), a nonlinear regression model used for the hourly load forecast [@grenieretal:2006]. The calibration process requires the use of weather data collected across the province of Quebec. This model can adapted to the number of parameters to be calibrated and the amount of data to be used. In total, 90 different instances can be thus defined with the following features:
+Performances of the two versions were compared using problems derived from Hydro-Québec operations. The use case considered consists in estimating the parameters of CM1 (Carole Mercier 1), a nonlinear regression model used for the hourly load forecast of Quebec [@grenieretal:2006]. The calibration process requires the use of weather data collected across the province. This model can modified depending on the number of parameters to be calibrated and the amount of data to be used. In total, 90 different instances can be thus defined with the following features:
 
 - from 258 to 726 parameters
 - from 468 to 716 total constraints (with 2 to 10 equalities)
@@ -112,7 +112,7 @@ As a short tutorial, we consider the following problem [@hockschittkowski:1980, 
         \end{aligned}
 \end{equation}
 
-and show how to use the package to model and solve problem \eqref{eq:hickschitt_pb65}.
+and then show how to use the package to model and solve problem it.
 
 ```julia
 using Enlsip
