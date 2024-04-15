@@ -264,3 +264,16 @@ Enlsip.solve!(Crmodel)
 # Show solving status
 Enlsip.status(Crmodel)
 ```
+
+To give an insight on how the performance of the algorithm scales when dimensions increase, the following table gives a benchmark[^BT] of the solving times (in seconds) obtained with different values of parameter `n`. For comparison purposes, the calculation times obtained with the Julia version of the [IPOPT](https://github.com/jump-dev/Ipopt.jl) general solver for nonlinear programming [^WB06] are also indicated.
+
+ Value of `n` | `Enlsip.jl` | `Ipopt.jl`
+:-------------|:------------|-----------:
+`10`          | `3.616e-4`  | `2.703e-3`
+ `100`        | `3.322e-2`  | `4.759e-3`
+ `1000`       | `2.325e0`   | `2.520e-2`
+ `5000`       | `3.172e2`   | `1.490e-1`
+
+[^BT]: The values shown in the table were obtained using the `@btime` macro from the [BenchmarkTools.jl](https://juliaci.github.io/BenchmarkTools.jl/stable/) package.
+
+[^WB06]: A. Wächter and L. Biegler, *On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming*, Mathematical Programming, vol. 106(1), pages 25-57, 2006.
