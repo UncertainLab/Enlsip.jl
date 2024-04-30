@@ -861,7 +861,7 @@ function subspace_min_previous_step(
     end
 
     dim = previous_dimR
-    if (((ρ[dim] > predb * ρ_prk) && (rlenb * τ[dim] < τ[dim+1])) ||
+    if previous_dimR < size(τ,1) && (((ρ[dim] > predb * ρ_prk) && (rlenb * τ[dim] < τ[dim+1])) ||
         (c2 * τ[dim] < τ[dim+1]))
         suggested_dim = dim
     else
@@ -1071,17 +1071,17 @@ function determine_solving_dim(
                     prelin_previous_dim, previous_α)
             end
             newdim = max(mindim, suggested_dim)
-        end
-
-        newdim = max(0, min(rankR, previous_dimR))
-        if newdim != 0
-            k = max(previous_dimR - 1, 1)
-            if l_estim_sd[newdim] != 0
-                η = l_estim_sd[k] / l_estim_sd[newdim]
+        
+        else
+            newdim = max(0, min(rankR, previous_dimR))
+            if newdim != 0
+                k = max(previous_dimR - 1, 1)
+                if l_estim_sd[newdim] != 0
+                    η = l_estim_sd[k] / l_estim_sd[newdim]
+                end
             end
         end
     end
-
     return newdim, η
 end
 
@@ -2602,7 +2602,7 @@ function enlsip(x0::Vector{T},
     # Gradient of the objective function
     ∇fx = transpose(J) * rx
 
-    p_gn = zeros(n)
+    p_gn = zeros(T, n)
 
     # Estimation of the Lagrange multipliers
     # Computation of the Gauss-Newton search direction
