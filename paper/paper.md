@@ -2,9 +2,10 @@
 title: 'Enlsip.jl: A Julia optimization package to solve constrained nonlinear least-squares problems'
 tags:
   - Julia
-  - optimization
-  - constrained nonlinear least squares
+  - constrained optimization
+  - nonlinear least-squares
   - Fortran77
+  - short-term load forecasting
 authors:
   - name: Pierre Borie
     orcid: 0009-0000-1043-5057
@@ -34,7 +35,7 @@ bibliography: paper.bib
 This type of problem is mathematically formulated as:
 \begin{equation}\label{eq:cnlls}
          \quad \begin{aligned}  
-                        \quad	\min_{x \in \mathbb{R}^n}        \quad&  \dfrac{1}{2} \sum_{i=1}^{m} r_i(x)^2  \\
+                        \quad \min_{x \in \mathbb{R}^n}        \quad&  \dfrac{1}{2} \sum_{i=1}^{m} r_i(x)^2  \\
                         \text{s.t.}      \quad & c_i(x)=0, \quad i =1,\ldots,q\\
                         & c_i(x) \geq 0, \quad i=q+1,\ldots,\ell,
         \end{aligned}
