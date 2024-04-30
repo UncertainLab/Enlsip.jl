@@ -83,7 +83,7 @@ The authors of the Fortran77 version of ENLSIP developed a linesearch method in 
 
 ### Convergence
 
-To our knowledge, there is no proof of convergence of the method described above, though local convergence with a linear rate should be expected from the Gauss-Newton paradigm, provided that the initial point is close enough to the solution and that the optimal active does not change. Numerical tests confirmed that the efficiency of the method is influenced by the initial point.
+To our knowledge, there is no formal proof of convergence of the method described above, though local convergence with a linear rate should be expected from the Gauss-Newton paradigm, provided that the initial point is close enough to the solution and that the optimal active does not change. Numerical tests confirmed that the efficiency of the method is influenced by the initial point.
 
 ## Bug reports and contributions
 
