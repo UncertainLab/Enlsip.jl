@@ -2,25 +2,32 @@
 
 [![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/) 
 
-Package `Enlsip.jl` is the Julia version of an optimization library originally written in Fortran77 and designed to solve nonlinear least squares problems under nonlinear constraints.
- The optimization method implemented in Enlsip was conceived by two swedish authors, Per Lindstrom and Per Ake Wedin from the Institute of Informatation processing of the University of Umea in Sweden.
+Package `Enlsip.jl` is the Julia version of ENLSIP, an open source algorithm originally written in Fortran77 and designed to solve nonlinear least-squares problems subject to nonlinear constraints.
+The optimization method implemented in ENLSIP is described in
+ 
+> Per Lindström and Per-Åke Wedin, *Gauss Newton based algorithms for constrained nonlinear least squares problems*.
+> Technical Report S-901 87, Institute of Information processing, University of Umeå, Sweden, 1988.
 
-Problems that can be solved using Enlsip are modeled as follows:
+The source code of the Fortran77 library is available at [https://plato.asu.edu/sub/nonlsq.html](https://plato.asu.edu/sub/nonlsq.html).
+
+Problems that can be solved using `Enlsip.jl` are modeled as follows:
 
 ```math
 \begin{aligned}
 \min_{x \in \mathbb{R}^n} \quad &  \dfrac{1}{2} \|r(x)\|^2 \\
 \text{s.t.} \quad & c_i(x) = 0, \quad i \in \mathcal{E} \\
 & c_i(x) \geq 0, \quad i \in \mathcal{I}, \\
+& l_i \leq x_i \leq u_i, \quad i \in \{1,\ldots,n\}, 
 \end{aligned}
 ```
 
 where:
 
 * the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ are assumed to be $\mathcal{C}^2$ functions;
-* norm $\|\cdot\|$ denotes the Euclidean norm.
+* norm $\|\|\cdot\|\|$ denotes the Euclidean norm;
+* $l$ and $u$ are respectively vectors of lower and upper bounds.
 
-Note that box constraints are modeled as general inequality constraints.
+In the formulation above, bound constraints are written seperately but they are treated as classical inequality constraints in the method implemented in ENLSIP.
 
 ## How to install
 
@@ -31,11 +38,11 @@ To add Enlsip, use Julia's package manager by typing the following command insid
    Pkg.add("Enlsip")
 ```
 
-## How to Use Enlsip
+## How to Use
 
 Solving a problem with Enlsip is organized in two steps.
 
-First, you need to define to create a model of your problem with the `CnlsModel` structure.
+First, you need to create a model of your problem with the `CnlsModel` structure.
 
 ### Creating a model
 
@@ -69,7 +76,7 @@ An object of type `CnlsModel` can be created using a constructor, whose argument
 
 Then, once your model is instantiated, you can call the `solve!` function to solve your problem.
 
-### Example with problem 65 from  Hock Schittkowski collection
+### Example with problem 65 from Hock Schittkowski collection[^HS80]
 
 ```julia
 # Import Enlsip
@@ -79,8 +86,6 @@ using Enlsip
 
 n = 3 # number of parameters
 m = 3 # number of residuals
-nb_eq = 0 # number of equality constraints
-nb_constraints = 7 # number of inequality constraints
 
 # Residuals and jacobian matrix associated
 r(x::Vector) = [x[1] - x[2]; (x[1]+x[2]-10.0) / 3.0; x[3]-5.0]
@@ -89,7 +94,7 @@ jac_r(x::Vector) = [1. -1. 0;
     1/3 1/3 0.;
     0. 0. 1.]
 
-# Constraints (one equality and box constraints)
+# Constraints (one nonlinear inequality and box constraints)
 c(x::Vector) = [48.0 - x[1]^2-x[2]^2-x[3]^2]
 jac_c(x::Vector) = [ -2x[1] -2x[2] -2x[3]]
 x_l = [-4.5, -4.5, -5.0]
@@ -108,7 +113,8 @@ Enlsip.solve!(hs65_model)
 
 # Print solution and objective value
 
-println("Algorithm successfully terminated : ", Enlsip.status(hs65_model))
-println("Optimal solution : ", Enlsip.solution(hs65_model))
-println("Optimal objective value : ", Enlsip.objective_value(hs65_model))
+println("Algorithm termination status: ", Enlsip.status(hs65_model))
+println("Optimal solution: ", Enlsip.solution(hs65_model))
+println("Optimal objective value: ", Enlsip.objective_value(hs65_model))
 ```
+[^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.
