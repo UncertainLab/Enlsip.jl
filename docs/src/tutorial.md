@@ -23,7 +23,8 @@ with:
 
 * the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ assumed to be $\mathcal{C}^2$ functions;
 * norm $\|\cdot\|$ denoting the Euclidean norm.
-Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, as shown later in this section, they can be provided as vectors of lower and/or upper bounds, which is more convenient for this type of constraints.
+
+Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see next section).
 
 It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
 
@@ -63,7 +64,7 @@ If the Jacobian matrices functions are not provided, they are computed numerical
 
 It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called as `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
 
-## [Solving a model](@id Solving a model)
+## [Solving](@id Solving a model)
 
 Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. By default, the tolerance used in the algorithm is the square root of the relative precision on floating point numbers. For instance, with `Float64`, it will approximately equal `1e-8`.
 
@@ -133,8 +134,6 @@ First, we provide the dimensions of the problems.
 
 n = 3 # number of parameters
 m = 3 # number of residuals
-nb_eq = 0 # number of equality constraints
-nb_constraints = 7 # number of inequality constraints
 nothing # hide
 ```
 
@@ -149,7 +148,7 @@ jac_r(x::Vector) = [1. -1. 0;
     1/3 1/3 0.;
     0. 0. 1.]
 
-# Constraints (one equality and box constraints)
+# Constraints (one nonlinear inequality and box constraints)
 
 c(x::Vector) = [48.0 - x[1]^2-x[2]^2-x[3]^2] # evaluation function for the equality constraint
 jac_c(x::Vector) = [ -2x[1] -2x[2] -2x[3]] # Jacobian matrix of the equality constraint

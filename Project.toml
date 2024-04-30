@@ -1,7 +1,7 @@
 name = "Enlsip"
 uuid = "d5306a6b-d590-428d-a53a-eb3bb2d36f2d"
 authors = ["pierre-borie"]
-version = "0.9.4"
+version = "0.9.5"
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
