@@ -8,7 +8,7 @@ CurrentModule = Enlsip
 using Enlsip
 ```
 
-This sections provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
+This section provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
 As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
@@ -26,7 +26,7 @@ with:
 
 Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see next section).
 
-It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
+It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continuously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
 
 ## Instantiate a model
 
@@ -44,8 +44,8 @@ The three following positional arguments are mandatory to create a model:
 * `nb_parameters` : number of variables
 * `nb_residuals` : number of residuals
 
-The following keywords arguments are optional and deal with constraints and Jacobian matrices.
-If the Jacobian matrices functions are not provided, they are computed numerically by forward differences using automatic differenciation[^Backend].
+The following keyword arguments are optional and deal with constraints and Jacobian matrices.
+If the Jacobian matrix functions are not provided, they are computed numerically by forward differences using automatic differenciation[^Backend].
 
 [^Backend]: `ForwardDiff.jl` [https://juliadiff.org/ForwardDiff.jl/stable/](https://juliadiff.org/ForwardDiff.jl/stable/)
 
@@ -62,11 +62,11 @@ If the Jacobian matrices functions are not provided, they are computed numerical
  `x_low`              | vector of lower bounds
  `x_upp`              | vector of upper bounds
 
-It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called as `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
+It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
 
 ## [Solving](@id Solving a model)
 
-Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. By default, the tolerance used in the algorithm is the square root of the relative precision on floating point numbers. For instance, with `Float64`, it will approximately equal `1e-8`.
+Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on an instantiated model. By default, the tolerance used in the algorithm is the square root of the relative precision on floating point numbers. For instance, with `Float64`, it will approximately equal `1e-8`.
 
 ```@docs
 Enlsip.solve!
