@@ -27,12 +27,9 @@ Keywords arguments:
 
     - Default value is set to `false`
 """
-function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int=100, scaling::Bool=false)
+function solve!(model::CnlsModel{T}; silent::Bool=true, max_iter::Int=100, scaling::Bool=false, time_limit::T=1000.,
+    abs_tol::T=eps(T), rel_tol::T=√abs_tol, c_tol::T=rel_tol, x_tol::T=rel_tol) where {T}
 
-    # Relative precision
-    ε = eps(eltype(model.starting_point))
-    sqr_ε = sqrt(ε)
-    
     # Internal scaling
     model.constraints_scaling = scaling
     
@@ -48,8 +45,8 @@ function solve!(model::CnlsModel; silent::Bool=true, max_iter::Int=100, scaling:
     nb_constraints = total_nb_constraints(model)
 
     # Call the ENLSIP solver
-    exit_code, x_opt, f_opt, enlsip_info = enlsip(model.starting_point, residuals_evalfunc, constraints_evalfunc, model.nb_parameters, model.nb_residuals, model.nb_eqcons, nb_constraints,
-    scaling=scaling, MAX_ITER=max_iter, ε_rel = sqr_ε, ε_x = sqr_ε, ε_c = sqr_ε)
+    exit_code, x_opt, f_opt, enlsip_info = enlsip(model.starting_point, residuals_evalfunc, constraints_evalfunc, model.nb_parameters, model.nb_residuals, model.nb_eqcons, nb_constraints;
+    scaling=scaling, MAX_ITER=max_iter, TIME_LIMIT=time_limit, ε_rel = rel_tol, ε_x = x_tol, ε_c = c_tol, ε_rank=√eps(T))
 
     # Update of solution related fields in model
     model.model_info = enlsip_info

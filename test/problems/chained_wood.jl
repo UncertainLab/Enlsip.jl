@@ -1,4 +1,4 @@
-@testset "ChainedWood problem for Newton method" begin
+@testset "ChainedWood problem for local Newton method" begin
 
     # Dimensions
     n = 20 # 1000 20, needs to be ≥ 8
@@ -35,4 +35,5 @@
     solve!(CW_model)
     
     @test status(CW_model) in values(dict_status_codes)
+
 end

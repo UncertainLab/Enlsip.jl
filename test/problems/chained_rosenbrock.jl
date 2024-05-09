@@ -65,4 +65,10 @@
     @test status(Crmodel) in values(dict_status_codes)
     @test typeof(solution(Crmodel)) <: Vector && size(solution(Crmodel),1) == n
     @test typeof(objective_value(Crmodel)) <: Number && isfinite(objective_value(Crmodel))  
+
+    # Time limit 
+    
+    solve!(Crmodel; time_limit=-1.0)
+
+    @test status(Crmodel) == dict_status_codes[-11]
 end

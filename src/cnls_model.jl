@@ -150,7 +150,7 @@ This structure contains the following attributes:
     
     * `x_low` and `x_upp` : respectively vectors of lower and upper bounds
 
-    * `status_code` : integer indicating the solving status of the model.
+    * `status_code` : integer indicating the solving status of the model
 """
 mutable struct CnlsModel{T} <: AbstractCnlsModel{T}
     residuals
@@ -178,7 +178,7 @@ function convert_exit_code(code::Int)
     status_code = 0
     if code > 0
         status_code = 1
-    elseif code == -2
+    elseif code == -2 || code == -11
         status_code = code
     else
         status_code = -1
@@ -192,6 +192,7 @@ const dict_status_codes = Dict(
     1 => :found_first_order_stationary_point,
     -1 => :failed,
     -2 => :maximum_iterations_exceeded,
+    -11 => :time_limit_exceeded
 )
 
 
