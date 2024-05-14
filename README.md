@@ -1,10 +1,10 @@
 # Enlsip.jl
 
-[![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/) 
+[![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/)
 
 Package `Enlsip.jl` is the Julia version of ENLSIP, an open source algorithm originally written in Fortran77 and designed to solve nonlinear least-squares problems subject to nonlinear constraints.
 The optimization method implemented in ENLSIP is described in
- 
+
 > Per Lindström and Per-Åke Wedin, *Gauss Newton based algorithms for constrained nonlinear least squares problems*.
 > Technical Report S-901 87, Institute of Information processing, University of Umeå, Sweden, 1988.
 
