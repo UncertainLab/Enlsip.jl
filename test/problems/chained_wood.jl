@@ -1,4 +1,4 @@
-@testset "ChainedWood problem for Newton method" begin
+@testset "ChainedWood problem for local Newton method" begin
 
     # Dimensions
     n = 20 # 1000 20, needs to be ≥ 8
@@ -32,7 +32,8 @@
     x0 = [(mod(i,2) == 1 ? -2. : 1.) for i=1:n]
 
     CW_model = CnlsModel(r,n,m; starting_point=x0, eq_constraints=c, nb_eqcons=nb_eq)
-    solve!(CW_model)
+    solve!(CW_model; rel_tol=1e-5, x_tol = 1e-3, c_tol=1e-6)
     
     @test status(CW_model) in values(dict_status_codes)
+
 end

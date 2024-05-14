@@ -1,10 +1,10 @@
 # Enlsip.jl
 
-[![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/) 
+[![](https://img.shields.io/badge/docs-stable-green.svg)](https://uncertainlab.github.io/Enlsip.jl/stable/) [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://uncertainlab.github.io/Enlsip.jl/dev/)
 
 Package `Enlsip.jl` is the Julia version of ENLSIP, an open source algorithm originally written in Fortran77 and designed to solve nonlinear least-squares problems subject to nonlinear constraints.
 The optimization method implemented in ENLSIP is described in
- 
+
 > Per Lindström and Per-Åke Wedin, *Gauss Newton based algorithms for constrained nonlinear least squares problems*.
 > Technical Report S-901 87, Institute of Information processing, University of Umeå, Sweden, 1988.
 
@@ -115,6 +115,7 @@ Enlsip.solve!(hs65_model)
 
 println("Algorithm termination status: ", Enlsip.status(hs65_model))
 println("Optimal solution: ", Enlsip.solution(hs65_model))
-println("Optimal objective value: ", Enlsip.objective_value(hs65_model))
+println("Optimal objective value: ", Enlsip.sum_sq_residuals(hs65_model))
 ```
+
 [^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

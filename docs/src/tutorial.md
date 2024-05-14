@@ -5,10 +5,10 @@ CurrentModule = Enlsip
 ```
 
 ```@setup tutorial
-using Enlsip
+using Enlsip, JuMP, Ipopt
 ```
 
-This sections provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
+This section provides details on how to instantiate and solve a constrained least-squares problem with `Enlsip.jl`
 As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
@@ -24,11 +24,11 @@ with:
 * the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ assumed to be $\mathcal{C}^2$ functions;
 * norm $\|\cdot\|$ denoting the Euclidean norm.
 
-Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see next section).
+Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see [Instantiate](@ref)).
 
-It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
+It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continuously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
 
-## Instantiate a model
+## [Instantiate a model](@id Instantiate)
 
 Solving a problem with Enlsip is organized in two steps.
 
@@ -36,7 +36,7 @@ First, a model of type [`CnlsModel`](@ref) must be instantiated.
 
 The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem.
 
-Although the package enables one to create linear unconstrained least squares, it is recommended to use it to solve nonlinear least squares with general constraints.
+Although the package enables one to create linear unconstrained least squares, it is recommended to use it on problems with nonlinear residuals and general constraints.
 
 The three following positional arguments are mandatory to create a model:
 
@@ -44,8 +44,8 @@ The three following positional arguments are mandatory to create a model:
 * `nb_parameters` : number of variables
 * `nb_residuals` : number of residuals
 
-The following keywords arguments are optional and deal with constraints and Jacobian matrices.
-If the Jacobian matrices functions are not provided, they are computed numerically by forward differences using automatic differenciation[^Backend].
+The following keyword arguments are optional and deal with constraints and Jacobian matrices.
+If the Jacobian matrix functions are not provided, they are computed numerically by forward differences using automatic differenciation[^Backend].
 
 [^Backend]: `ForwardDiff.jl` [https://juliadiff.org/ForwardDiff.jl/stable/](https://juliadiff.org/ForwardDiff.jl/stable/)
 
@@ -62,11 +62,11 @@ If the Jacobian matrices functions are not provided, they are computed numerical
  `x_low`              | vector of lower bounds
  `x_upp`              | vector of upper bounds
 
-It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called as `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
+It is assumed that the the different functions passed as arguments of the `CnlsModel` constructor are called `f(x)`, where `x` is a vector of `nb_parameters` elements and `f` is one of the functions `residuals`, `eq_constraints`, `jacobian_eqcons` etc.
 
 ## [Solving](@id Solving a model)
 
-Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on a instantiated model. By default, the tolerance used in the algorithm is the square root of the relative precision on floating point numbers. For instance, with `Float64`, it will approximately equal `1e-8`.
+Then, the `Enlsip` solver can be used by calling the [`solve!`](@ref) function on an instantiated model. One can pass keywords arguments to modify some options of the algorithm or adjust the tolerances. For the expression of the termination criteria, see [Method](@ref) page ([Stopping](@ref)).
 
 ```@docs
 Enlsip.solve!
@@ -90,7 +90,7 @@ One can get additional info about termination of the algorithm by calling one of
 [`solution`](@ref)           |
 [`status`](@ref)             |
 [`constraints_values`](@ref) |
-[`objective_value`](@ref)    |
+[`sum_sq_residuals`](@ref)    |
 
 ```@docs
 Enlsip.solution
@@ -105,7 +105,7 @@ Enlsip.constraints_values
 ```
 
 ```@docs
-Enlsip.objective_value
+Enlsip.sum_sq_residuals
 ```
 
 ## [Examples](@id Examples)
@@ -188,14 +188,14 @@ If one just wants to know about termination of the algorithm, calling [`status`]
 Enlsip.status(hs65_model)
 ```
 
-Then, calling [`solution`](@ref) and [`objective_value`](@ref) will respectively return the optimal solution obtained and the value of objective function at that point.
+Then, calling [`solution`](@ref) and [`sum_sq_residuals`](@ref) will respectively return the optimal solution obtained and the value of objective function at that point.
 
 ```@example tutorial
 hs65_solution = Enlsip.solution(hs65_model)
 ```
 
 ```@example tutorial
-hs65_objective = Enlsip.objective_value(hs65_model)
+hs65_objective = Enlsip.sum_sq_residuals(hs65_model)
 ```
 
 The solution obtained is relatively close to the expected optimal solution, although it differs from more than the tolerance used.
@@ -255,18 +255,46 @@ end
 x0 = [(mod(i,2) == 1 ? -1.2 : 1.0) for i=1:n] # Starting point
 
 # Instantiation of the model
-Crmodel = CnlsModel(r,n,m; starting_point=x0, eq_constraints=c, nb_eqcons=nb_eq)
+cr_enlsip = CnlsModel(r,n,m; starting_point=x0, eq_constraints=c, nb_eqcons=nb_eq)
 
 # Solving
-Enlsip.solve!(Crmodel)
+Enlsip.solve!(cr_enlsip)
 
 # Show solving status
-Enlsip.status(Crmodel)
+Enlsip.status(cr_enlsip)
 ```
 
-To give an insight on how the performance of the algorithm scales when dimensions increase, the following table gives a benchmark[^BT] of the solving times (in seconds) obtained with different values of parameter `n`. For comparison purposes, the calculation times obtained with the Julia version of the [IPOPT](https://github.com/jump-dev/Ipopt.jl) general solver for nonlinear programming [^WB06] are also indicated.
+To give an insight on how the performance of the algorithm scales when dimensions increase, we give a table of the solving time obtained with different values of parameter `n`. For comparison purposes, the calculation times obtained with the Julia version of the [IPOPT](https://github.com/jump-dev/Ipopt.jl) general solver for nonlinear programming [^WB06] are also indicated. Both solvers were used with their respective default tolerances. With the same starting point, both solvers reach similar local solutions despite different stopping criteria.
 
- Value of `n` | `Enlsip.jl` | `Ipopt.jl`
+We show the modeling of the problem with [JuMP](https://jump.dev/JuMP.jl/stable/) and its solving with `IPOPT` for `n=1000`.
+
+```@example tutorial
+cr_ipopt = Model(Ipopt.Optimizer); set_silent(cr_ipopt)
+@variable(cr_ipopt, x[i=1:n], start = x0[i])
+
+for k=1:n-2
+    @NLconstraint(cr_ipopt, 3x[k+1]^3 + 2x[k+2] - 5 + sin(x[k+1]-x[k+2])*sin(x[k+1]+x[k+2]) + 4x[k+1] - x[k]*exp(x[k]-x[k+1]) - 3 == 0)
+end
+
+@NLobjective(cr_ipopt, Min, sum(100(x[i]^2 - x[i+1])^2 + (x[i]-1)^2 for i=1:n-1))
+
+optimize!(cr_ipopt)
+termination_status(cr_ipopt)
+```
+
+The two solvers reach similar solutions.
+
+```@example tutorial
+Enlsip.sum_sq_residuals(cr_enlsip) ≈ objective_value(cr_ipopt)
+```
+
+```@example tutorial
+Enlsip.solution(cr_enlsip) ≈ value.(cr_ipopt[:x])
+```
+
+The benchmark[^BT] of the solving times (in seconds) for `Enlsip.jl` and `Ipopt.jl` is given in the following table:
+
+ Value of `n` | `Enlsip.jl` | `IPOPT`
 :-------------|:------------|-----------:
 `10`          | `3.616e-4`  | `2.703e-3`
  `100`        | `3.322e-2`  | `4.759e-3`

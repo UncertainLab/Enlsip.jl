@@ -103,6 +103,7 @@
 
     osborne2_model = Enlsip.CnlsModel(r,n,m; starting_point = x0, x_low = low_bounds, x_upp = upp_bounds)
     solve!(osborne2_model)
+
     bounds_values = Enlsip.constraints_values(osborne2_model)
     @test nb_upper_bounds(osborne2_model) == length(upp_bounds) && nb_lower_bounds(osborne2_model) == length(low_bounds)
     @test total_nb_constraints(osborne2_model) == nb_constraints
