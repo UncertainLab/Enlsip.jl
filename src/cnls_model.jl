@@ -1,6 +1,6 @@
 export AbstractCnlsModel, CnlsModel
 export constraints_values, equality_constraints_values, inequality_constraints_values, bounds_constraints_values, total_nb_constraints, nb_equality_constraints, nb_inequality_constraints, nb_lower_bounds, nb_upper_bounds
-export status, solution, objective_value, dict_status_codes
+export status, solution, sum_sq_residuals, dict_status_codes
 
 #= Structures where the first two fields are the functions evaluating residuals or constraints and the associated jacobian matrix
 =#
@@ -120,7 +120,7 @@ Abstract type for [`CnlsModel`](@ref) structure.
 abstract type AbstractCnlsModel{T<:AbstractFloat} end
 
 """
-    CnlsModel
+    CnlsModel{T} where {T<:AbstractFloat}
 
 Structure modeling an instance of a constrainted nonlinear least squares problem.
 
@@ -128,11 +128,11 @@ This structure contains the following attributes:
 
     * `residuals` : function that computes the vector of residuals
     
-    * `nb_parameters` : number of variables
+    * `nb_parameters::Int` : number of variables
     
-    * `nb_residuals` : number of residuals
+    * `nb_residuals::Int` : number of residuals
 
-    * `stating_point` : initial solution
+    * `stating_point::Vector{T}` : initial solution
     
     * `jacobian_residuals` : function that computes the jacobian matrix of the residuals
     
@@ -146,11 +146,11 @@ This structure contains the following attributes:
     
     * `jacobian_ineqcons` : function that computes the jacobian matrix of the inequality constraints
     
-    * `nb_ineqcons` : number of inequality constraints
+    * `nb_ineqcons::Int` : number of inequality constraints
     
-    * `x_low` and `x_upp` : respectively vectors of lower and upper bounds
+    * `x_low::Vector{T}` and `x_upp::Vector{T}` : respectively vectors of lower and upper bounds
 
-    * `status_code` : integer indicating the solving status of the model.
+    * `status_code::Int` : integer indicating the solving status of the model
 """
 mutable struct CnlsModel{T} <: AbstractCnlsModel{T}
     residuals
@@ -178,7 +178,7 @@ function convert_exit_code(code::Int)
     status_code = 0
     if code > 0
         status_code = 1
-    elseif code == -2
+    elseif code == -2 || code == -11
         status_code = code
     else
         status_code = -1
@@ -192,6 +192,7 @@ const dict_status_codes = Dict(
     1 => :found_first_order_stationary_point,
     -1 => :failed,
     -2 => :maximum_iterations_exceeded,
+    -11 => :time_limit_exceeded
 )
 
 
@@ -208,7 +209,9 @@ If the algorithm met an abnormall termination criteria, it will return one of th
 
 * `:failed` : the algorithm encoutered a numerical error that triggered termination
 
-* `:maximum_iterations_exceeded` : a solution could not be reached within the maximum number of iterations.
+* `:maximum_iterations_exceeded` : a solution could not be reached within the maximum number of iterations
+
+* `:time_limit_exceeded` : the algorithm stopped because solving time exceeded the time limit
 """
 status(model::CnlsModel) = dict_status_codes[model.status_code]
 
@@ -220,12 +223,12 @@ Once the given `model` has been solved, this function returns the optimal soluti
 solution(model::CnlsModel) = model.sol
 
 """
-    objective_value(model)
+    sum_sq_residuals(model)
 
 Once the given `model` has been solved, returns the value of the objective function, i.e. sum of squared residuals functions, computed at the optimal solution.
 If no convergence, this value is computed at the last solution obtained.
 """
-objective_value(model::CnlsModel) = model.obj_value
+sum_sq_residuals(model::CnlsModel) = model.obj_value
 
 nb_equality_constraints(model::CnlsModel) = model.nb_eqcons
 
@@ -331,7 +334,7 @@ Constructor for [`CnlsModel`](@ref).
 
 * Keywords arguments :
 
-    - `stating_point` : initial solution (default is a vector of zeros of appropriate dimension)
+    - `stating_point::Vector{T}` : initial solution (default is a vector of zeros of appropriate dimension)
     
     - `jacobian_residuals` : function that computes the jacobian matrix of the residuals. If not passed as argument, it is computed numericcaly by forward differences
     
@@ -339,15 +342,15 @@ Constructor for [`CnlsModel`](@ref).
     
     - `jacobian_eqcons` : function that computes the jacobian matrix of the equality constraints. If not passed as argument, it is computed numericcaly by forward differences
     
-    - `nb_eqcons` : number of equality constraints
+    - `nb_eqcons::Int` : number of equality constraints
     
     - `ineq_constraints` : function that computes the vector of inequality constraints
     
     - `jacobian_ineqcons` : function that computes the jacobian matrix of the inequality constraints. If not passed as argument, it is computed numericcaly by forward differences
     
-    - `nb_ineqcons` : number of inequality constraints
+    - `nb_ineqcons::Int` : number of inequality constraints
     
-    - `x_low` and `x_upp` : respectively vectors of lower and upper bounds
+    - `x_low::Vector{T}` and `x_upp::Vector{T}` : respectively vectors of lower and upper bounds
 """
 function CnlsModel(
     residuals=nothing,

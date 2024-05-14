@@ -20,7 +20,7 @@ function pseudo_rank(diag_T::Vector{T}, ε_rank::T) where {T}
         pseudo_rank = 0
     else
         l_diag = length(diag_T)
-        tol = abs(diag_T[1]) * sqrt(l_diag) * ε_rank
+        tol = abs(diag_T[1]) * sqrt(T(l_diag)) * ε_rank
         r = 1
         while r < l_diag && abs(diag_T[r]) > tol
             r += 1
@@ -2341,6 +2341,8 @@ This functions returns `exit_code`, an integer containing infos about the termin
 
 * `-10` if not possible to satisfy the constraints
 
+* `-11` if time limit exceeded
+
 
 If multiple convergence criteria are satisfied, their corresponding values are added into `exit_code`.
 
@@ -2363,7 +2365,8 @@ function check_termination_criteria(
     ε_x::T,
     ε_c::T,
     error_code::Int,
-    sigmin::T,
+    Δ_time::T,
+    σ_min::T,
     λ_abs_max::T,
     Ψ_error::Int) where {T}
 
@@ -2390,9 +2393,7 @@ function check_termination_criteria(
             elseif W.t > 1
                 factor = λ_abs_max
             end
-            lagrange_mult_pos = [iter.λ[i] for i = W.q+1:W.t if iter.λ[i] > 0]
-            sigmin = (isempty(lagrange_mult_pos) ? 0 : minimum(lagrange_mult_pos))
-            necessary_crit = necessary_crit && (sigmin >= ε_rel * factor)
+            necessary_crit = necessary_crit && (σ_min >= ε_rel * factor)
         end
 
         if necessary_crit
@@ -2443,7 +2444,12 @@ function check_termination_criteria(
         
         elseif x_diff <= 10.0 * ε_x && Atcx_nrm <= 10.0 * ε_c && active_penalty_sum >= 1.0
             exit_code = -10
+ 
+        # time limit    
+        elseif Δ_time > 0 
+            exit_code = -11
         end
+
         # TODO : implement critera 10-11
     end
     return exit_code
@@ -2491,7 +2497,7 @@ function final_print(model::CnlsModel, exec_info::ExecutionInfo, io::IO=stdout)
 
     @printf(io, "\nNumber of iterations...................: %4d", length(exec_info.iterations_detail))
 
-    @printf(io, "\n\nSquare sum of residuals................: %.7e", objective_value(model)) 
+    @printf(io, "\n\nSquare sum of residuals................: %.7e", sum_sq_residuals(model)) 
  
     @printf(io, "\n\nNumber of function evaluations.........: %4d", exec_info.nb_function_evaluations)
     @printf(io, "\nNumber of Jacobian matrix evaluations..: %4d", exec_info.nb_jacobian_evaluations)
@@ -2572,8 +2578,8 @@ The following arguments are optionnal and have default values:
 function enlsip(x0::Vector{T},
     r::ResidualsFunction, c::ConstraintsFunction,
     n::Int, m::Int, q::Int, l::Int;
-    scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100,
-    ε_abs::T=T(1e-10), ε_rel::T=T(1e-5), ε_x::T=T(1e-3), ε_c::T=T(1e-4), ε_rank::T=T(1e-10),
+    scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100, TIME_LIMIT::T=1000.,
+    ε_abs::T=eps(T), ε_rel::T=√ε_abs, ε_x::T=ε_rel, ε_c::T=ε_rel, ε_rank::T=ε_rel,
     ) where {T}
     
     enlsip_info = ExecutionInfo()
@@ -2634,10 +2640,11 @@ function enlsip(x0::Vector{T},
     # Check for termination criterias at new point
     evaluation_restart!(first_iter, error_code)
 
-    sigmin, λ_abs_max = minmax_lagrangian_mult(first_iter.λ,  working_set, active_C)
+    σ_min, λ_abs_max = minmax_lagrangian_mult(first_iter.λ,  working_set, active_C)
+    Δ_time = (time()-start_time) - TIME_LIMIT    
 
     exit_code = check_termination_criteria(first_iter, previous_iter, working_set, active_C, x, cx, rx_sum,
-        ∇fx, MAX_ITER, nb_iteration, ε_abs, ε_rel, ε_x, ε_c, error_code, sigmin, λ_abs_max, Ψ_error)
+        ∇fx, MAX_ITER, nb_iteration, ε_abs, ε_rel, ε_x, ε_c, error_code, Δ_time, σ_min, λ_abs_max, Ψ_error)
 
     # Initialization of the list of collected information to be printed
     list_iter_detail = Vector{DisplayedInfo}(undef, 0)
@@ -2699,10 +2706,11 @@ function enlsip(x0::Vector{T},
         # Check for termination criterias at new point
         evaluation_restart!(iter, error_code)
 
-        sigmin, λ_abs_max = minmax_lagrangian_mult(iter.λ, working_set, active_C)
+        σ_min, λ_abs_max = minmax_lagrangian_mult(iter.λ, working_set, active_C)
+        Δ_time = (time()-start_time) - TIME_LIMIT
 
         exit_code = check_termination_criteria(iter, previous_iter, working_set, active_C, iter.x, cx, rx_sum, ∇fx, MAX_ITER, nb_iteration,
-            ε_abs, ε_rel, ε_x, ε_c, error_code, sigmin, λ_abs_max, Ψ_error)
+            ε_abs, ε_rel, ε_x, ε_c, error_code, Δ_time, σ_min, λ_abs_max, Ψ_error)
 
         # Another step is required
         if (exit_code == 0)
