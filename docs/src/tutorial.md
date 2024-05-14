@@ -8,7 +8,7 @@ CurrentModule = Enlsip
 using Enlsip
 ```
 
-This section provides details on how to instantiate and solve a constrained least squares problem with `Enlsip.jl`
+This section provides details on how to instantiate and solve a constrained least-squares problem with `Enlsip.jl`
 As a reminder from [Home](@ref), problems to solve are of the following form:
 
 ```math
@@ -24,11 +24,11 @@ with:
 * the residuals $r_i:\mathbb{R}^n\rightarrow\mathbb{R}$ and the constraints $c_i:\mathbb{R}^n\rightarrow\mathbb{R}$ assumed to be $\mathcal{C}^2$ functions;
 * norm $\|\cdot\|$ denoting the Euclidean norm.
 
-Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see next section).
+Note that with this formulation, bounds constraints are not distinguished from general inequality constraints. Though, for ease of use, they can be provided directly as vectors of lower and/or upper bounds (see [Instantiate](@ref)).
 
 It should be borne in mind, however, that the method implemented in `Enlsip.jl` has been conceived for nonlinear problems, as there is no other assumption made about the nature of the residuals and constraints functions, apart from being two-time continuously differentiable. The algorithm can still be used to solve linear least squares subject to linear constraints but it will not be as effective as other software where those aspects are taken into account in the design of the optimization method.
 
-## Instantiate a model
+## [Instantiate a model](@id Instantiate)
 
 Solving a problem with Enlsip is organized in two steps.
 
@@ -36,7 +36,7 @@ First, a model of type [`CnlsModel`](@ref) must be instantiated.
 
 The `CnlsModel` constructor requires the evaluation functions of residuals, constraints, their associated jacobian matrices and dimensions of the problem.
 
-Although the package enables one to create linear unconstrained least squares, it is recommended to use it to solve nonlinear least squares with general constraints.
+Although the package enables one to create linear unconstrained least squares, it is recommended to use it on problems with nonlinear residuals and general constraints.
 
 The three following positional arguments are mandatory to create a model:
 
