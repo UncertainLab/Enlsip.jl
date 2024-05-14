@@ -115,6 +115,7 @@ Enlsip.solve!(hs65_model)
 
 println("Algorithm termination status: ", Enlsip.status(hs65_model))
 println("Optimal solution: ", Enlsip.solution(hs65_model))
-println("Optimal objective value: ", Enlsip.objective_value(hs65_model))
+println("Optimal objective value: ", Enlsip.sum_sq_residuals(hs65_model))
 ```
+
 [^HS80]: W. Hock and K. Schittkowski. *Test Examples for Nonlinear Programming Codes*, volume 187 of Lecture Notes in Economics and Mathematical Systems. Springer, second edition, 1980.

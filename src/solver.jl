@@ -1,33 +1,65 @@
 export solve!, print_cnls_model
 
 """
-    solve!(model)
+    solve!(model{T})
 
-Once a [`CnlsModel`](@ref) has been instantiated, this function solves the optimzation problem associated by using the method implemented in the `Enlsip` solver.
+Once a [`CnlsModel`](@ref) has been instantiated, this function solves the optimzation problem associated by using the method implemented in the `Enlsip` solver. 
 
-
-Keywords arguments:
+Options:
 
 * `silent::Bool` 
     
     - Set to `false` if one wants the algorithm to print details about the iterations and termination of the solver
 
-    - Default value is `true`, i.e. by default, there is no output. If one wants to print those information afert solving, the [`print_cnls_model`](@ref) method 
-    can be called.
+    - Default is `true`, i.e. by default, there is no output. If one wants to print those information afert solving, the [`print_cnls_model`](@ref) method 
+    can be called
 
 * `max_iter::Int` 
 
     - Maximum number of iterations allowed
 
-    - Default value is set to `100`
+    - Default is `100`
 
 * `scaling::Bool` 
 
     - Set to `true` if one wants the algorithm to work with a constraints jacobian matrix whose rows are scaled (i.e. all constraints gradients vectors are scaled)
 
-    - Default value is set to `false`
+    - Default is `false`
+
+* `time_limit::T`
+
+    - Maximum elapsed time (i.e. wall time)
+
+    - Default is `1000`
+
+
+Tolerances:
+
+* `abs_tol::T`
+
+    - Absolute tolerance for small residuals
+
+    - Default is `eps(T)`
+
+* `rel_tol::T`
+
+    - Relative tolerance used to measure first order criticality and consistency
+
+    - Default is `sqrt(eps(T))`
+
+* `c_tol::T`
+
+    - Tolerance used to measure feasability of the constraints
+
+    - Default is `sqrt(eps(T))`
+
+* `x_tol::T`
+
+    - Tolerance used to measure the distance between two consecutive iterates
+
+    - Default is `sqrt(eps(T))`
 """
-function solve!(model::CnlsModel{T}; silent::Bool=true, max_iter::Int=100, scaling::Bool=false, time_limit::T=1000.,
+function solve!(model::CnlsModel{T}; silent::Bool=true, max_iter::Int=100, scaling::Bool=false, time_limit::T=1e3,
     abs_tol::T=eps(T), rel_tol::T=√abs_tol, c_tol::T=rel_tol, x_tol::T=rel_tol) where {T}
 
     # Internal scaling

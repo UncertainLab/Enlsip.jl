@@ -64,7 +64,7 @@
     @test nb_constraints == total_nb_constraints(Crmodel)
     @test status(Crmodel) in values(dict_status_codes)
     @test typeof(solution(Crmodel)) <: Vector && size(solution(Crmodel),1) == n
-    @test typeof(objective_value(Crmodel)) <: Number && isfinite(objective_value(Crmodel))  
+    @test typeof(sum_sq_residuals(Crmodel)) <: Number && isfinite(sum_sq_residuals(Crmodel))  
 
     # Time limit 
     

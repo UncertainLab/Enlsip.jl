@@ -2497,7 +2497,7 @@ function final_print(model::CnlsModel, exec_info::ExecutionInfo, io::IO=stdout)
 
     @printf(io, "\nNumber of iterations...................: %4d", length(exec_info.iterations_detail))
 
-    @printf(io, "\n\nSquare sum of residuals................: %.7e", objective_value(model)) 
+    @printf(io, "\n\nSquare sum of residuals................: %.7e", sum_sq_residuals(model)) 
  
     @printf(io, "\n\nNumber of function evaluations.........: %4d", exec_info.nb_function_evaluations)
     @printf(io, "\nNumber of Jacobian matrix evaluations..: %4d", exec_info.nb_jacobian_evaluations)

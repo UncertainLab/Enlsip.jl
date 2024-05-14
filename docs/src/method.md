@@ -72,17 +72,17 @@ The authors of the Fortran77 version of ENLSIP developed a linesearch method in 
 
 ### Lagrange multipliers estimate
 
-Components of $\lambda_k$ associated to the inequality constraints are fixed to zero.
+Components of $\lambda_k$ associated to the inequality constraints not in the working set are fixed to zero.
 
-The remaining multipliers, associated to constraints in the working set, are estimated by solving the linear least-squares problem:
+The remaining multipliers, associated to the constraints in the working set, are estimated by the minimum norm solution of the KKT system obtained after cancelling the Lagrange multipliers corresponding to inactive inequality constraints (under strict complementarity). This results into computing the vector $\hat{\lambda}_k^{LS}$ such that:
 
 ```math
-\min_v \|\hat{A}_k v - J_k^Tr_k\|^2,
+\hat{\lambda}_k^{LS} \in \arg\min_v \|\hat{A}_k^T v - J_k^Tr_k\|^2.
 ```
 
 Since this process does not depend from the computation of the search direction, the method implemented in `Enlsip.jl` can be qualified as a primal method.
 
-## Stopping criteria
+## [Stopping criteria](@id Stopping)
 
 Termination criteria implemented in `Enlsip.jl` follow the conventions presented in chapter 8 of *Practical Optimization*[^GMW82].
 
@@ -91,19 +91,19 @@ From the Lagrange multipliers estimates $\lambda_k$, we define:
 * scalar $\sigma_{min}$: smallest Lagrange multiplier estimate corresponding to an inequality constraint in the working set;
 * scalar $\lambda_{max}$: Lagrange multiplier estimate of largest absolute value (among multipliers associated with equality and inequality constraints).
 
-The small positive constants $\varepsilon_c$, $\varepsilon_{rel}$, $\varepsilon_x$ and $\varepsilon_{abs}$ are user-specified tolerances (default values are given in the [Usage](@ref) page).
+The small positive constants `c_tol`, `rel_tol`, `x_tol` and `abs_tol` are user-specified tolerances. Default values used in `Enlsip.jl` are given in the [Usage](@ref) page (see function [`solve!`](@ref)).
 
 To qualify as a candidate solution, current iterate must first meet the following necessary conditions:
 
-* *Strict Complementariry*: Lagrange multipliers estimates of inequality constraints in the working set are stricly positive;
-* *Feasability*: $\|\hat{c}_k\| \leq \varepsilon_c$ and values of the inequality constraints not in the working set are strictly positive at $x_k$;
-* *First order criticality*: $\|\nabla_x L(x_k,\lambda_k)\| \leq \sqrt{\varepsilon_{rel}} \left(1+\|J^T_kr_k\|\right)$;
-* *Consistency*: $\sigma_{min} \geq \varepsilon_{rel} \lambda_{max}$.
+* *Strict Complementarity*: Lagrange multipliers estimates of inequality constraints in the working set are stricly positive;
+* *Primal feasability*: $\|\hat{c}_k\| \leq$ `c_tol` and values of the inequality constraints not in the working set are strictly positive at $x_k$;
+* *First order criticality*: $\|\nabla_x L(x_k,\lambda_k)\| \leq$ `√rel_tol` $* \left(1+\|J^T_kr_k\|\right)$;
+* *Consistency*: $\sigma_{min} \geq$ `rel_tol`$* \lambda_{max}$.
 
 If all criteria above are satisfied, the algorithm stops if one of the following conditions is met:
 
-* *Small distance between the last two setps*: $\|x_{k+1}-x_k\| < \varepsilon_x \|x_k\|$;
-* *Small residuals*: $\|r_k\|^2 \leq \varepsilon_{abs}$.
+* *Small distance between the last two setps*: $\|x_{k+1}-x_k\|<$ `x_tol` $ *\|x_k\|$;
+* *Small residuals*: $\|r_k\|^2 \leq$ `abs_tol`.
 
 ### Convergence
 
