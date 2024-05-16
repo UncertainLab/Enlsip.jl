@@ -57,7 +57,7 @@ Comparison of results and performance on operational Hydro-Québec optimization 
 
 ## Method
 
-The ``ENLSIP`` solver incorporates an iterative Gauss-Newton method designed to find a first-order critical point of problem \eqref{eq:cnlls}. At each iteration, the algorithm solves an approximation of the original problem obtained after linearizing both residuals and constraints in a small neighborhood of the current point. Then, a subset of constraints, treated as equalities for the ongoing iteration, is formed. It contains all the equality constraints and the inequality constraints that are believed to be active, i.e. satisfied with equality, at the solution. To select the appropriate inequality constraints at each iteration, the authors implemented a strategy that follows the principles outlined in chapter 6 of @gillmurraywright:1985. The resulting subproblem, with a linear least-squares objective and linear equality constraints, is then solved using a null-space type method [@nocedalwright:2006, chapter 15].
+The ``ENLSIP`` solver incorporates an iterative Gauss-Newton method designed to find a first-order critical point of problem \eqref{eq:cnlls}. At each iteration, the algorithm solves an approximation of the original problem obtained after linearizing both residuals and constraints in a small neighborhood of the current point. Then, a subset of constraints, treated as equalities for the ongoing iteration, is formed. It contains all the equality constraints and the inequality constraints that are believed to be active, i.e. satisfied with equality, at the solution. To select the appropriate inequality constraints at each iteration, the authors implemented a strategy that follows the principles outlined in the Chapter 6 of @gillmurraywright:1985. The resulting subproblem, with a linear least-squares objective and linear equality constraints, is then solved using a null-space type method [@nocedalwright:2006, Chapter 15].
 
 To our knowledge, there is no formal proof of convergence for the method implemented in ``ENLSIP``, although local convergence at a linear rate is to be expected from the Gauss-Newton paradigm. In practice, one can observe better performance when the starting point is relatively close to a solution of the problem. However, the algorithm is not suitable for large-scale applications. Indeed, its performance tend to deteriorate on problems with a few hundreds of parameters and constraints $(n+\ell \geq 200)$ and more than a thousand residuals $(m\geq 1000)$.
 
@@ -85,15 +85,15 @@ Out of 90 instances, 26 either failed to converge or stopped because of a numeri
 Several existing Julia packages can be used to solve nonlinear least-squares problems. For unconstrained and bound-constrained problems, these include [NL2sol.jl](https://github.com/macd/NL2sol.jl) [@dennisetal:1981], [LsqFit.jl](https://github.com/JuliaNLSolvers/LsqFit.jl) and [LeastSquaresOptim.jl](https://github.com/matthieugomez/LeastSquaresOptim.jl). Also available are least-squares variants of the  ``TRUNK`` and ``TRON`` [@linmore:1999a] solvers from ``JSOSolvers.jl`` [@jsosolvers:2023]. The [CaNNOLeS.jl](https://github.com/JuliaSmoothOptimizers/CaNNOLeS.jl) [@orbansiquiera:2020] package handles the equality-constrained case. However, these libraries do not entirely apply to the formulation stated in \eqref{eq:cnlls}, for which more general solvers, such as [Ipopt.jl](https://github.com/jump-dev/Ipopt.jl) [@wachterbiegler:2006], are typically used.
 
 Although our package may not incorporate the latest advancements in nonlinear optimization, especially for large-scale problems, its use remains relevant.
-Indeed, the method employed in ``ENLSIP`` manages to exploit the least-squares structure while also remaining very general, covering nonlinearity and non-convexity of the residuals and constraints. This capability renders it an effective tool for solving problems of reasonable dimensions ($n\leq 500$ and $m\leq 1000$). Moreover, in comparison to other categories, like the unconstrained case [as discussed in @dennisschnabel:1996, chapter 10], this specific class of least-squares problems with general constraints is, to the best of our knowledge, rarely addressed in the literature.
+Indeed, the method employed in ``ENLSIP`` manages to exploit the least-squares structure while also remaining very general, covering nonlinearity and non-convexity of the residuals and constraints. This capability renders it an effective tool for solving problems of reasonable dimensions ($n\leq 500$ and $m\leq 1000$). Moreover, in comparison to other categories, like the unconstrained case [as discussed in @dennisschnabel:1996, Chapter 10], this specific class of least-squares problems with general constraints is, to the best of our knowledge, rarely addressed in the literature.
 
 # Usage
 
 [Enlsip.jl](https://github.com/UncertainLab/Enlsip.jl) can be dowloaded from the Julia package manager by running the following command into the REPL:
 
 ```julia
-using Pkg 
-Pkg.add("Enlsip")
+julia> using Pkg 
+julia> Pkg.add("Enlsip")
 ```
 
 The package provides a basic interface for modeling optimization problems of the form \eqref{eq:cnlls}, by passing the residuals, constraints functions and dimensions of the problem.
