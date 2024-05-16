@@ -106,7 +106,7 @@ As a short tutorial, we consider the following problem [@hockschittkowski:1980, 
 
 \begin{equation}\label{eq:hickschitt_pb65}
          \quad \begin{aligned}  
-                        \quad\min_{x_1,x_2,x_3}        \quad&  (x_1-x_2)^2 + \dfrac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
+                        \quad\min_{x}        \quad&  (x_1-x_2)^2 + \dfrac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
                         \text{s.t.}      \quad & 48-x_1^2-x_2^2-x_3^2 \geq 0 \\
                         & -4.5\leq x_i \leq 4.5, \quad i=1,2\\
                         & -5 \leq x_3  \leq 5,
