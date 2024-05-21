@@ -11,11 +11,13 @@ authors:
     orcid: 0009-0000-1043-5057
     affiliation: 1
   - name: Alain Marcotte
+    orcid: 0009-0009-5964-8892
     affiliation: 2
   - name: Fabian Bastin
     orcid: 0000-0003-1323-6787
     affiliation: 1
   - name: Stéphane Dellacherie
+    orcid: 0009-0005-9043-9328
     affiliation: "2, 3"
 affiliations:
  - name: Department of Computer Science and Operations Research, University of Montreal, Montreal, QC, Canada
@@ -106,7 +108,7 @@ As a short tutorial, we consider the following problem [@hockschittkowski:1980, 
 
 \begin{equation}\label{eq:hickschitt_pb65}
          \quad \begin{aligned}  
-                        \quad\min_{x}        \quad&  (x_1-x_2)^2 + \dfrac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
+                        \quad\min        \quad&  (x_1-x_2)^2 + \dfrac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
                         \text{s.t.}      \quad & 48-x_1^2-x_2^2-x_3^2 \geq 0 \\
                         & -4.5\leq x_i \leq 4.5, \quad i=1,2\\
                         & -5 \leq x_3  \leq 5,
