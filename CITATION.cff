@@ -1,0 +1,46 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Borie
+  given-names: Pierre
+  orcid: "https://orcid.org/0009-0000-1043-5057"
+- family-names: Marcotte
+  given-names: Alain
+  orcid: "https://orcid.org/0009-0009-5964-8892"
+- family-names: Bastin
+  given-names: Fabian
+  orcid: "https://orcid.org/0000-0003-1323-6787"
+- family-names: Dellacherie
+  given-names: Stéphane
+  orcid: "https://orcid.org/0009-0005-9043-9328"
+doi: 10.5281/zenodo.11206280
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Borie
+    given-names: Pierre
+    orcid: "https://orcid.org/0009-0000-1043-5057"
+  - family-names: Marcotte
+    given-names: Alain
+    orcid: "https://orcid.org/0009-0009-5964-8892"
+  - family-names: Bastin
+    given-names: Fabian
+    orcid: "https://orcid.org/0000-0003-1323-6787"
+  - family-names: Dellacherie
+    given-names: Stéphane
+    orcid: "https://orcid.org/0009-0005-9043-9328"
+  date-published: 2024-05-22
+  doi: 10.21105/joss.06226
+  issn: 2475-9066
+  issue: 97
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6226
+  title: "Enlsip.jl: A Julia optimization package to solve constrained
+    nonlinear least-squares problems"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06226"
+  volume: 9
+title: "Enlsip.jl: A Julia optimization package to solve constrained
+  nonlinear least-squares problems"
