@@ -37,7 +37,7 @@ bibliography: paper.bib
 This type of problem is mathematically formulated as:
 \begin{equation}\label{eq:cnlls}
          \quad \begin{aligned}  
-                        \quad \min_{x \in \mathbb{R}^n}        \quad&  \dfrac{1}{2} \sum_{i=1}^{m} r_i(x)^2  \\
+                        \quad \min_{x \in \mathbb{R}^n}        \quad&  \frac{1}{2} \sum_{i=1}^{m} r_i(x)^2  \\
                         \text{s.t.}      \quad & c_i(x)=0, \quad i =1,\ldots,q\\
                         & c_i(x) \geq 0, \quad i=q+1,\ldots,\ell,
         \end{aligned}
@@ -108,7 +108,7 @@ As a short tutorial, we consider the following problem [@hockschittkowski:1980, 
 
 \begin{equation}\label{eq:hickschitt_pb65}
          \quad \begin{aligned}  
-                        \quad\min        \quad&  (x_1-x_2)^2 + \dfrac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
+                        \quad\min        \quad&  (x_1-x_2)^2 + \frac{1}{9}(x_1+x_2-10)^2+(x_3-5)^2  \\
                         \text{s.t.}      \quad & 48-x_1^2-x_2^2-x_3^2 \geq 0 \\
                         & -4.5\leq x_i \leq 4.5, \quad i=1,2\\
                         & -5 \leq x_3  \leq 5,
