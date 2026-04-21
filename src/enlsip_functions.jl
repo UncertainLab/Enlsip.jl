@@ -250,23 +250,26 @@ function hessian_res!(
 
     # Data
     ε1 = eps(T)^(1.0 / 3.0)
+    f1, f2, f3, f4 = zeros(T, m), zeros(T, m), zeros(T, m), zeros(T, m)
+    x_work = copy(x)
     for k in 1:n, j in 1:k
         ε_k = max(abs(x[k]), 1.0) * ε1
         ε_j = max(abs(x[j]), 1.0) * ε1
-        e_k = [i == k for i = 1:n]
-        e_j = [i == j for i = 1:n]
 
-        f1, f2, f3, f4 = zeros(T,m), zeros(T,m), zeros(T,m), zeros(T,m)
-        res_eval!(r,x + ε_j * e_j + ε_k * e_k, f1)
-        res_eval!(r,x - ε_j * e_j + ε_k * e_k, f2)
-        res_eval!(r,x + ε_j * e_j - ε_k * e_k, f3)
-        res_eval!(r,x - ε_j * e_j - ε_k * e_k, f4)
-        
+        copyto!(x_work, x); x_work[j] += ε_j; x_work[k] += ε_k
+        res_eval!(r, x_work, f1)
+        copyto!(x_work, x); x_work[j] -= ε_j; x_work[k] += ε_k
+        res_eval!(r, x_work, f2)
+        copyto!(x_work, x); x_work[j] += ε_j; x_work[k] -= ε_k
+        res_eval!(r, x_work, f3)
+        copyto!(x_work, x); x_work[j] -= ε_j; x_work[k] -= ε_k
+        res_eval!(r, x_work, f4)
 
-        # Compute line j of g_k
-        g_kj = (f1 - f2 - f3 + f4) / (4 * ε_j * ε_k)
-
-        s = dot(g_kj, rx)
+        s = zero(T)
+        for i in 1:m
+            s += (f1[i] - f2[i] - f3[i] + f4[i]) * rx[i]
+        end
+        s /= (4 * ε_j * ε_k)
         B[k, j] = s
         if j != k
             B[j, k] = s
@@ -293,29 +296,30 @@ function hessian_cons!(
     B::Matrix{T}) where {T}
 
     # Data
-    ε1 = eps(T)^(1 / 3)
+    ε1 = eps(T)^(1.0 / 3.0)
     active_indices = @view active[1:t]
+    f1, f2, f3, f4 = zeros(T, l), zeros(T, l), zeros(T, l), zeros(T, l)
+    x_work = copy(x)
 
     for k in 1:n, j in 1:k
         ε_k = max(abs(x[k]), 1.0) * ε1
         ε_j = max(abs(x[j]), 1.0) * ε1
-        e_k = [i == k for i = 1:n]
-        e_j = [i == j for i = 1:n]
 
-        f1, f2, f3, f4 = zeros(T,l), zeros(T,l), zeros(T,l), zeros(T,l)
-        cons_eval!(c,x + ε_j * e_j + ε_k * e_k, f1)
-        cons_eval!(c,x - ε_j * e_j + ε_k * e_k, f2)
-        cons_eval!(c,x + ε_j * e_j - ε_k * e_k, f3)
-        cons_eval!(c,x - ε_j * e_j - ε_k * e_k, f4)
+        copyto!(x_work, x); x_work[j] += ε_j; x_work[k] += ε_k
+        cons_eval!(c, x_work, f1)
+        copyto!(x_work, x); x_work[j] -= ε_j; x_work[k] += ε_k
+        cons_eval!(c, x_work, f2)
+        copyto!(x_work, x); x_work[j] += ε_j; x_work[k] -= ε_k
+        cons_eval!(c, x_work, f3)
+        copyto!(x_work, x); x_work[j] -= ε_j; x_work[k] -= ε_k
+        cons_eval!(c, x_work, f4)
 
-        act_f1 = @view f1[active_indices]
-        act_f2 = @view f2[active_indices]
-        act_f3 = @view f3[active_indices]
-        act_f4 = @view f4[active_indices]
-
-        # Compute line j of G_k
-        g_kj = (act_f1 - act_f2 - act_f3 + act_f4) / (4.0 * ε_k * ε_j)
-        s = dot(g_kj, λ)
+        s = zero(T)
+        for i in 1:t
+            ii = active_indices[i]
+            s += (f1[ii] - f2[ii] - f3[ii] + f4[ii]) * λ[i]
+        end
+        s /= (4.0 * ε_k * ε_j)
         B[k, j] = s
         if k != j
             B[j, k] = s
@@ -515,11 +519,14 @@ function second_lagrange_mult_estimate!(
     p_gn::Vector{T},
     t::Int,
     scaling::Bool,
-    diag_scale::Vector{T}) where {T}
+    diag_scale::Vector{T},
+    ε_rank::T=sqrt(eps(T))) where {T}
 
+    prankA = pseudo_rank(diag(F_A.R), ε_rank)
     J1 = (J*F_A.Q)[:, 1:t]
     b = J1' * (rx + J * p_gn)
-    v = UpperTriangular(F_A.R) \ b
+    v = zeros(T, t)
+    v[1:prankA] = UpperTriangular(F_A.R[1:prankA, 1:prankA]) \ b[1:prankA]
     λ[:] = v[invperm(F_A.p)]
 
     if scaling
@@ -541,7 +548,7 @@ function minmax_lagrangian_mult(
     diag_scale = active_C.diag_scale
     sq_rel = sqrt(eps(eltype(λ)))
     λ_abs_max = 0.0
-    sigmin = 1e6
+    sigmin = T(Inf)
 
     if t > q
         λ_abs_max = maximum(map(abs,λ))
@@ -601,17 +608,36 @@ end
 function evaluate_violated_constraints(
     cx::Vector{T},
     W::WorkingSet,
-    index_α_upp::Int) where {T}
+    index_α_upp::Int,
+    n::Int=W.l) where {T}
 
     # Data
     ε = sqrt(eps(eltype(cx)))
     δ = 0.1
+    bnd = min(W.l, n)
     added = false
     if W.l > W.t
         i = 1
         while i <= W.l - W.t
             k = W.inactive[i]
             if cx[k] < ε || (k == index_α_upp && cx[k] < δ)
+                if W.t >= bnd
+                    worst_k = 0
+                    worst_val = -Inf
+                    for j = W.q+1:W.t
+                        jj = W.active[j]
+                        if cx[jj] > worst_val
+                            worst_val = cx[jj]
+                            worst_k = j
+                        end
+                    end
+                    if worst_k > 0 && worst_val > cx[k]
+                        remove_constraint!(W, worst_k)
+                    else
+                        i += 1
+                        continue
+                    end
+                end
                 add_constraint!(W, i)
                 added = true
             else
@@ -1761,8 +1787,12 @@ function newton_raphson(
 
     α, newton_iter = x_min, 0
     ε, error = 1e-4, 1.0
-    while error > ε || newton_iter < 3
+    max_newton_iter = 50
+    while (error > ε || newton_iter < 3) && newton_iter < max_newton_iter
         c = dds(α)
+        if abs(c) < eps(typeof(α))
+            break
+        end
         h = -ds(α) / c
         α += h
         error = (2 * Dm * h^2) / abs(c)
@@ -2418,11 +2448,23 @@ function check_termination_criteria(
                 exit_code += 40
             end
 
+            if exit_code > 0 && W.l - W.t > 0
+                feas = 1
+                for ii = 1:(W.l - W.t)
+                    jj = W.inactive[ii]
+                    if cx[jj] <= 0.0
+                        feas = -1
+                        break
+                    end
+                end
+                exit_code *= feas
+            end
+
         end
     end
     if exit_code == 0
         # Check abnormal termination criteria
-        x_diff = norm(prev_iter.x - iter.x)
+        x_diff = norm(prev_iter.x - x)
         Atcx_nrm = norm(transpose(active_C.A) * active_C.cx)
         active_penalty_sum = (W.t == 0 ? 0.0 : dot(iter.w[W.active[1:W.t]], iter.w[W.active[1:W.t]]))
         
@@ -2652,7 +2694,7 @@ function enlsip(x0::Vector{T},
     push!(list_iter_detail, first_iter_detail)
 
     # Check for violated constraints and add it to the working set
-    first_iter.add = evaluate_violated_constraints(cx, working_set, first_iter.index_α_upp)
+    first_iter.add = evaluate_violated_constraints(cx, working_set, first_iter.index_α_upp, n)
 
     active_C.cx = cx[working_set.active[1:working_set.t]]
     active_C.A = A[working_set.active[1:working_set.t], :]
@@ -2709,24 +2751,27 @@ function enlsip(x0::Vector{T},
         σ_min, λ_abs_max = minmax_lagrangian_mult(iter.λ, working_set, active_C)
         Δ_time = (time()-start_time) - TIME_LIMIT
 
-        exit_code = check_termination_criteria(iter, previous_iter, working_set, active_C, iter.x, cx, rx_sum, ∇fx, MAX_ITER, nb_iteration,
+        exit_code = check_termination_criteria(iter, previous_iter, working_set, active_C, x, cx, rx_sum, ∇fx, MAX_ITER, nb_iteration,
             ε_abs, ε_rel, ε_x, ε_c, error_code, Δ_time, σ_min, λ_abs_max, Ψ_error)
 
         # Another step is required
         if (exit_code == 0)
+            # Update f_opt before recording iteration details
+            f_opt = dot(rx, rx)
+
             # Print collected informations about current iteration
             # Push current iteration data to the list of collected information to be printed
             current_iter_detail = DisplayedInfo(f_opt, active_cx_sum, norm(iter.p), iter.α, iter.progress)
             push!(list_iter_detail, current_iter_detail)
-         
+
             # Check for violated constraints and add it to the working set
 
-            iter.add = evaluate_violated_constraints(cx, working_set, iter.index_α_upp)
+            iter.add = evaluate_violated_constraints(cx, working_set, iter.index_α_upp, n)
             active_C.cx = cx[working_set.active[1:working_set.t]]
             active_C.A = A[working_set.active[1:working_set.t], :]
 
             # Update iteration data field
-        
+
             nb_iteration += 1
             previous_iter = copy(iter)
             iter.x = x
@@ -2734,7 +2779,6 @@ function enlsip(x0::Vector{T},
             iter.cx = cx
             iter.del = false
             iter.add = false
-            f_opt = dot(rx, rx)
 
         else
             # Algorithm has terminated

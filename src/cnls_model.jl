@@ -436,7 +436,7 @@ function instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_
         # Jacobian not provided for equality constraints
         elseif jacobian_eqcons === nothing && jacobian_ineqcons !== nothing
             ad_jac_eqcons(x) = vcat(ForwardDiff.jacobian(eq_constraints,x), jacobian_ineqcons(x), jac_bounds_func(x))
-            constraints_evalfunc = ConstraintsFunction(cons, jac_eqnum)
+            constraints_evalfunc = ConstraintsFunction(cons, ad_jac_eqcons)
         # Jacobian not provided
         else
             ad_jac_cons(x::Vector) =  vcat(ForwardDiff.jacobian(eq_constraints,x), ForwardDiff.jacobian(ineq_constraints, x), jac_bounds_func(x))
@@ -449,10 +449,10 @@ function instantiate_constraints_w_bounds(eq_constraints, jacobian_eqcons, ineq_
         if jacobian_eqcons === nothing
             jac_eqconsnum(x::Vector) = vcat(ForwardDiff.jacobian(eq_constraints,x), jac_bounds_func(x))
             constraints_evalfunc = ConstraintsFunction(eq_cons, jac_eqconsnum)
-        # Jacobian not provided
+        # Jacobian provided
         else
-            jac_eqcons(x::Vector) = vcat(jacobian_eq_cons(x), jac_bounds_func(x))
-            constraints_evalfunc = ConstraintsFunction(eq_cons, jac_eqcons)
+            jac_eqcons_w_bounds(x::Vector) = vcat(jacobian_eqcons(x), jac_bounds_func(x))
+            constraints_evalfunc = ConstraintsFunction(eq_cons, jac_eqcons_w_bounds)
         end
     # No equality constraints
     elseif eq_constraints === nothing && ineq_constraints !== nothing
@@ -485,11 +485,11 @@ function instantiate_constraints_wo_bounds(eq_constraints, jacobian_eqcons, ineq
 
         elseif jacobian_eqcons !== nothing && jacobian_ineqcons === nothing
             jac_cons_ineqnum(x::Vector) = vcat(jacobian_eqcons(x), ForwardDiff.jacobian(ineq_constraints, x))
-            constraints_evalfunc = ConstraintsFunction(cons, jac_ineqnum)
+            constraints_evalfunc = ConstraintsFunction(cons, jac_cons_ineqnum)
 
         elseif jacobian_eqcons === nothing && jacobian_ineqcons !== nothing
             ad_jac_eqcons(x) = vcat(ForwardDiff.jacobian(eq_constraints,x), jacobian_ineqcons(x))
-            constraints_evalfunc = ConstraintsFunction(cons, jac_eqnum)
+            constraints_evalfunc = ConstraintsFunction(cons, ad_jac_eqcons)
         else
             ad_jac_cons(x::Vector) =  vcat(ForwardDiff.jacobian(eq_constraints,x), ForwardDiff.jacobian(ineq_constraints, x))
             constraints_evalfunc = ConstraintsFunction(cons, ad_jac_cons)

@@ -91,8 +91,12 @@ mutable struct Iteration{T} <: AbstractIteration{T}
 end
 
 
-Base.copy(s::Iteration) = Iteration(s.x, s.p, s.rx, s.cx, s.t, s.α, s.index_α_upp, s.λ, s.w, s.rankA, s.rankJ2, s.dimA, s.dimJ2, s.b_gn, s.d_gn, 
-s.predicted_reduction, s.progress, s.grad_res, s.speed, s.β, s.restart, s.first, s.add, s.del, s.index_del, s.code, s.nb_newton_steps)
+Base.copy(s::Iteration) = Iteration(
+    copy(s.x), copy(s.p), copy(s.rx), copy(s.cx), s.t, s.α, s.index_α_upp,
+    copy(s.λ), copy(s.w), s.rankA, s.rankJ2, s.dimA, s.dimJ2,
+    copy(s.b_gn), copy(s.d_gn),
+    s.predicted_reduction, s.progress, s.grad_res, s.speed, s.β,
+    s.restart, s.first, s.add, s.del, s.index_del, s.code, s.nb_newton_steps)
 
 
 #=
