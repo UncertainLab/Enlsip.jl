@@ -8,9 +8,9 @@ export status, solution, sum_sq_residuals, dict_status_codes
 
 abstract type EvaluationFunction end
 
-mutable struct ResidualsFunction <: EvaluationFunction 
-    reseval
-    jacres_eval
+mutable struct ResidualsFunction{F,G} <: EvaluationFunction
+    reseval::F
+    jacres_eval::G
     nb_reseval::Int
     nb_jacres_eval::Int
 end
@@ -20,16 +20,11 @@ function ResidualsFunction(eval, jac_eval)
     ResidualsFunction(eval, jac_eval, 0, 0)
 end
 
-# function ResidualsFunction(eval)
-#     num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
-#     ResidualsFunction(eval, num_jac_eval,0,0)
-# end
-
 ResidualsFunction(eval) = ResidualsFunction(eval, x::Vector -> ForwardDiff.jacobian(eval, x))
 
-mutable struct ConstraintsFunction <: EvaluationFunction 
-    conseval
-    jaccons_eval
+mutable struct ConstraintsFunction{F,G} <: EvaluationFunction
+    conseval::F
+    jaccons_eval::G
     nb_conseval::Int
     nb_jaccons_eval::Int
 end
@@ -37,11 +32,6 @@ end
 function ConstraintsFunction(eval, jac_eval)
     ConstraintsFunction(eval, jac_eval, 0, 0)
 end
-
-# function ConstraintsFunction(eval)
-#     num_jac_eval(x::Vector{<:AbstractFloat}) = jac_forward_diff(eval,x)
-#     ConstraintsFunction(eval, num_jac_eval,0,0)
-# end
 
 ConstraintsFunction(eval) = ConstraintsFunction(eval, x::Vector -> ForwardDiff.jacobian(eval, x))
 
