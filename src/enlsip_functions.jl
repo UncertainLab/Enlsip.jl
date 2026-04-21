@@ -36,19 +36,14 @@ function new_point!(
     r::ResidualsFunction,
     c::ConstraintsFunction,
     rx::Vector{T},
-    cx::Vector{T},
-    J::Matrix{T},
-    A::Matrix{T}) where {T}
+    cx::Vector{T}) where {T}
 
-    # Evaluate residuals and associated jacobian matrix
-    res_eval!(r,x,rx)
-    jacres_eval!(r,x,J)
+    res_eval!(r, x, rx)
+    cons_eval!(c, x, cx)
+    J = jacres_eval(r, x)
+    A = jaccons_eval(c, x)
 
-    # Evaluate constraints and associated jacobian matrix
-    cons_eval!(c,x,cx)
-    jaccons_eval!(c,x,A)
-
-    return
+    return J, A
 end
 
 
@@ -204,7 +199,7 @@ If `rankA = t`, the first system is solved, otherwise, the second one is solved.
 * `F_J2` : QR decomposition of Matrix `J2` defined in [`sub_search_direction`](@ref)
 =#
 function gn_search_direction(
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     rx::Vector{T},
     cx::Vector{T},
     F_A::Factorization,
@@ -353,7 +348,7 @@ function newton_search_direction(
     working_set::WorkingSet,
     λ::Vector{T},
     rx::Vector{T},
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     F_A::Factorization,
     F_L11::Factorization,
     rankA::Int) where {T}
@@ -512,7 +507,7 @@ end
 #                     T          T            T
 # Solves the system  A * λ = J(x) (r(x) + J(x) * p_gn))
 function second_lagrange_mult_estimate!(
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     F_A::Factorization,
     λ::Vector{T},
     rx::Vector{T},
@@ -686,10 +681,10 @@ Then, compute the search direction using Gauss-Newton method.
 function update_working_set(
     W::WorkingSet,
     rx::Vector{T},
-    A::Matrix{T},
+    A::AbstractMatrix{T},
     C::Constraint,
     ∇fx::Vector{T},
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     p_gn::Vector{T},
     iter_k::Iteration,
     ε_rank::T) where {T}
@@ -736,7 +731,7 @@ function update_working_set(
             add_constraint!(W, s_inact)
             iter_k.index_del = 0
             iter_k.del = false
-            C.A = (C.scaling ? A[W.active[1:W.t], :] .* C.diag_scale : A[W.active[1:W.t], :])
+            C.A = (C.scaling ? Matrix(A[W.active[1:W.t], :]) .* C.diag_scale : Matrix(A[W.active[1:W.t], :]))
             F_A = qr((C.A)',ColumnNorm())
             rankA = pseudo_rank(diag(F_A.R), ε_rank)
             F_L11 = qr(F_A.R', ColumnNorm())
@@ -1201,7 +1196,7 @@ function search_direction_analys(
     active_C::Constraint,
     active_cx_sum::T,
     p_gn::Vector{T},
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     working_set::WorkingSet,
     F_A::Factorization,
     F_L11::Factorization,
@@ -2140,7 +2135,7 @@ end
 # Determine the upper bound of the steplength
 
 function upper_bound_steplength(
-    A::Matrix{T},
+    A::AbstractMatrix{T},
     cx::Vector{T},
     p::Vector{T},
     work_set::WorkingSet,
@@ -2193,10 +2188,10 @@ function compute_steplength(
     x::Vector{T},
     r::ResidualsFunction,
     rx::Vector{T},
-    J::Matrix{T},
+    J::AbstractMatrix{T},
     c::ConstraintsFunction,
     cx::Vector{T},
-    A::Matrix{T},
+    A::AbstractMatrix{T},
     active_constraint::Constraint,
     work_set::WorkingSet,
     K::Array{Array{T,1},1},
@@ -2645,20 +2640,19 @@ function enlsip(x0::Vector{T},
     K = [zeros(T, l) for i = 1:4]
 
     # Evaluate residuals, constraints and jacobian matrices at starting point
-    rx, cx = zeros(T,m), zeros(T,l)
-    J, A = zeros(T,m, n), zeros(T,l, n)
-    new_point!(x0, r, c, rx, cx, J, A)
+    rx, cx = zeros(T, m), zeros(T, l)
+    J, A = new_point!(x0, r, c, rx, cx)
     # First Iteration
     x_opt = x0
     f_opt = dot(rx, rx)
     first_iter = Iteration(x0, zeros(T,n), rx, cx, l, 1.0, 0, zeros(T,l), zeros(T,l), 0, 0, 0, 0, zeros(T,n), zeros(T,n), 0.0, 0.0, 0.0, 0.0, 0.0, false, true, false, false, 0, 1, 0)
-   
+
     # Initialization of the working set
     working_set = init_working_set(cx, K, first_iter, q, l)
 
     first_iter.t = working_set.t
 
-    active_C = Constraint(cx[working_set.active[1:working_set.t]], A[working_set.active[1:working_set.t], :], scaling, zeros(T,working_set.t))
+    active_C = Constraint(cx[working_set.active[1:working_set.t]], Matrix(A[working_set.active[1:working_set.t], :]), scaling, zeros(T,working_set.t))
 
     # Gradient of the objective function
     ∇fx = transpose(J) * rx
@@ -2688,7 +2682,7 @@ function enlsip(x0::Vector{T},
 
     # Evaluate residuals, constraints and compute jacobians at new point
 
-    new_point!(x, r, c, rx, cx, J, A)
+    J, A = new_point!(x, r, c, rx, cx)
     ∇fx = transpose(J) * rx
     rx_sum = dot(rx, rx)
 
@@ -2710,7 +2704,7 @@ function enlsip(x0::Vector{T},
     first_iter.add = evaluate_violated_constraints(cx, working_set, first_iter.index_α_upp, n)
 
     active_C.cx = cx[working_set.active[1:working_set.t]]
-    active_C.A = A[working_set.active[1:working_set.t], :]
+    active_C.A = Matrix(A[working_set.active[1:working_set.t], :])
 
 
     #= Rearrangement of iterations data storage
@@ -2754,8 +2748,8 @@ function enlsip(x0::Vector{T},
         x = x + α * iter.p
 
         # Evaluate residuals, constraints and compute jacobians at new point
-        new_point!(x, r, c, rx, cx, J, A)
-        rx_sum = dot(rx, rx)        
+        J, A = new_point!(x, r, c, rx, cx)
+        rx_sum = dot(rx, rx)
         ∇fx = transpose(J) * rx
 
         # Check for termination criterias at new point
@@ -2781,7 +2775,7 @@ function enlsip(x0::Vector{T},
 
             iter.add = evaluate_violated_constraints(cx, working_set, iter.index_α_upp, n)
             active_C.cx = cx[working_set.active[1:working_set.t]]
-            active_C.A = A[working_set.active[1:working_set.t], :]
+            active_C.A = Matrix(A[working_set.active[1:working_set.t], :])
 
             # Update iteration data field
 

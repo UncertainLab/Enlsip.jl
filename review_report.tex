@@ -782,4 +782,153 @@ O9 & \texttt{enlsip\_functions.jl} & various & Documented only \\
 \end{tabular}
 \end{table}
 
+%=======================================================================
+\section{Sparse Matrix Support}
+\label{sec:sparse}
+%=======================================================================
+
+For problems with structured (sparse) Jacobians, the current
+all-dense storage is a significant bottleneck.  Consider the
+Chained Rosenbrock test problem with $n=1000$ parameters, $m=1998$
+residuals, and $l=998$ equality constraints.  The residual Jacobian
+$J\in\mathbb{R}^{1998\times 1000}$ is tridiagonal ($\sim$\,4\,000
+non-zeros vs.\ 2\,000\,000 entries in the dense matrix), and the
+constraint Jacobian $A\in\mathbb{R}^{998\times 1000}$ is similarly
+banded.  Dense storage costs $\sim$\,24\,MB per matrix pair;
+sparse storage costs $\sim$\,300\,KB.  Matrix--vector products
+($J\,p$, $J^\top r$, $A\,p$) dominate the per-iteration cost and
+scale as $O(mn)$ dense versus $O(\mathrm{nnz})$ sparse.
+
+The changes described below allow user-provided Jacobians in any
+\texttt{AbstractMatrix} format (including
+\texttt{SparseMatrixCSC}) to flow through the solver without
+unnecessary densification, while keeping the internal
+active-constraint subsystem dense where required by the QR
+factorisation.
+
+%-----------------------------------------------------------------------
+\subsection{S1: \texttt{AbstractMatrix} type signatures}
+%-----------------------------------------------------------------------
+
+All function signatures that accept the residual Jacobian $J$ or the
+full constraint Jacobian $A$ as \emph{read-only} inputs (i.e.\
+they only perform matrix--vector products or column/row reads) are
+widened from \verb|Matrix{T}| to \verb|AbstractMatrix{T}|.  This
+single change is sufficient for Julia's multiple dispatch to
+select the appropriate sparse BLAS kernels for products like
+\verb|J * p| or \verb|transpose(J) * rx|.
+
+Affected functions include \texttt{new\_point!},
+\texttt{gn\_search\_direction}, \texttt{sub\_search\_direction},
+\texttt{newton\_search\_direction},
+\texttt{second\_lagrange\_mult\_estimate!},
+\texttt{search\_direction\_analys},
+\texttt{update\_working\_set},
+\texttt{compute\_steplength}, and
+\texttt{upper\_bound\_steplength}.
+
+%-----------------------------------------------------------------------
+\subsection{S2: Return-value Jacobian evaluation}
+%-----------------------------------------------------------------------
+
+The original evaluation wrappers pre-allocate dense buffers and
+copy into them:
+\begin{lstlisting}
+J = zeros(T, m, n)
+J[:] = r.jacres_eval(x)
+\end{lstlisting}
+This forces densification of any sparse result.
+The revised pattern removes the pre-allocation and uses the
+matrix returned by the user function directly:
+\begin{lstlisting}
+J = r.jacres_eval(x)
+\end{lstlisting}
+Since the user function already allocates its return value,
+eliminating the copy is more efficient even for dense
+Jacobians.  The evaluation wrappers
+\texttt{jacres\_eval} and \texttt{jaccons\_eval} now return the
+matrix instead of writing in-place, while
+\texttt{res\_eval!} and \texttt{cons\_eval!} remain in-place
+(vectors are always dense).
+
+%-----------------------------------------------------------------------
+\subsection{S3: Sparse box-constraint Jacobians}
+%-----------------------------------------------------------------------
+
+The \texttt{box\_constraints} helper constructs Jacobians of the
+form $\pm I_n$ restricted to rows with finite bounds.  The
+original code builds a full dense $n\times n$ identity matrix and
+then selects rows:
+\begin{lstlisting}
+Matrix{T}(I, n, n)[finite_rows, :]
+\end{lstlisting}
+For $n=1000$, this allocates an 8\,MB dense matrix only to
+extract a handful of rows.  The replacement uses
+\texttt{sparse}:
+\begin{lstlisting}
+sparse(I, n, n)[finite_rows, :]
+\end{lstlisting}
+The resulting Jacobian is a \texttt{SparseMatrixCSC} with at most
+$n$ non-zeros, regardless of which bounds are finite.  Since these
+Jacobians are constant (independent of $x$), they could also be
+pre-computed once; the current implementation re-evaluates them on
+each call but the sparse construction is already $O(n)$.
+
+%-----------------------------------------------------------------------
+\subsection{S4: Dense active-constraint interface}
+%-----------------------------------------------------------------------
+
+The active-constraint Jacobian \verb|C.A| (a $t\times n$ submatrix of $A$,
+where $t$ is the current working-set size) remains a dense \verb|Matrix{T}|.
+This is necessary because:
+\begin{itemize}[nosep]
+  \item The rank-revealing QR factorisation
+    \verb|qr(C.A', ColumnNorm())| requires a dense argument in
+    Julia's standard library.
+  \item Row deletion, insertion, and diagonal scaling are performed
+    frequently and are more efficient on dense storage.
+  \item The matrix is small ($t \le n$, often $t \ll l$).
+\end{itemize}
+When extracting \verb|C.A| from the (potentially sparse) full
+Jacobian $A$, an explicit conversion is performed:
+\begin{lstlisting}
+C.A = Matrix(A[active_indices, :])
+\end{lstlisting}
+This ensures that all downstream QR and triangular-solve
+operations receive dense inputs.
+
+%-----------------------------------------------------------------------
+\subsection{S5: Sparse-aware Hessian finite differences}
+%-----------------------------------------------------------------------
+
+The Hessian approximation routines \texttt{hessian\_res!} and
+\texttt{hessian\_cons!} accept $J$ or $A$ only indirectly (they
+call the evaluation functions).  Since the Hessian $B$ itself is
+dense (the finite-difference stencil generally fills all entries),
+no sparse treatment is needed for the output.  However, the
+function signatures are widened to accept sparse inputs where
+they appear.
+
+%-----------------------------------------------------------------------
+\subsection{Summary of sparse changes}
+%-----------------------------------------------------------------------
+
+\begin{table}[ht]
+\centering
+\caption{Summary of sparse matrix support changes.}
+\label{tab:sparse}
+\small
+\begin{tabular}{@{}lllp{6.5cm}@{}}
+\toprule
+\textbf{ID} & \textbf{File} & \textbf{Scope} & \textbf{Description} \\
+\midrule
+S1 & \texttt{enlsip\_functions.jl} & signatures & \texttt{Matrix\{T\}} $\to$ \texttt{AbstractMatrix\{T\}} \\
+S2 & \texttt{cnls\_model.jl}       & eval.\ pattern & return-value Jacobian evaluation \\
+S3 & \texttt{cnls\_model.jl}       & box constraints & \texttt{sparse(I,n,n)} instead of \texttt{Matrix(I,n,n)} \\
+S4 & \texttt{enlsip\_functions.jl} & active set & \texttt{Matrix(A[idx,:])} dense conversion \\
+S5 & \texttt{enlsip\_functions.jl} & Hessians & widened input signatures \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \end{document}

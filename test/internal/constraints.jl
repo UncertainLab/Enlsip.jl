@@ -6,8 +6,7 @@
     x = zeros(4)
     c_func = Enlsip.ConstraintsFunction(c)
     @test c_func.nb_conseval == 0 && c_func.nb_jaccons_eval == 0
-    A = Matrix{Float64}(undef, 2,4)
-    Enlsip.jaccons_eval!(c_func, x,A)
+    A = Enlsip.jaccons_eval(c_func, x)
     @test c_func.nb_conseval == 0 && c_func.nb_jaccons_eval == 1
 
     x_low = [-1.0, -Inf, -2.0, -Inf]
@@ -18,9 +17,8 @@
 
     h_func = Enlsip.instantiate_constraints_w_bounds(c, nothing, nothing, nothing, x_low, x_upp)
     hx = Vector{Float64}(undef, 6)
-    Ah = Matrix{Float64}(undef, 6, 4)
     Enlsip.cons_eval!(h_func, x, hx)
-    Enlsip.jaccons_eval!(h_func, x, Ah)
+    Ah = Enlsip.jaccons_eval(h_func, x)
     @test hx ≈ h_func.conseval(x)
-    @test Ah ≈ h_func.jaccons_eval(x) 
+    @test Ah ≈ h_func.jaccons_eval(x)
 end

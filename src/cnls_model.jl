@@ -43,10 +43,9 @@ function res_eval!(r::ResidualsFunction, x::Vector{T}, rx::Vector{T}) where {T<:
     return
 end
 
-function jacres_eval!(r::ResidualsFunction, x::Vector{T}, J::Matrix{T}) where {T<:AbstractFloat}
-    J[:] = r.jacres_eval(x)
+function jacres_eval(r::ResidualsFunction, x::Vector{T}) where {T<:AbstractFloat}
     r.nb_jacres_eval += 1
-    return
+    return r.jacres_eval(x)
 end
 
 function cons_eval!(c::ConstraintsFunction, x::Vector{T}, cx::Vector{T}) where {T<:AbstractFloat}
@@ -55,10 +54,9 @@ function cons_eval!(c::ConstraintsFunction, x::Vector{T}, cx::Vector{T}) where {
     return
 end
 
-function jaccons_eval!(c::ConstraintsFunction, x::Vector{T}, A::Matrix{T}) where {T<:AbstractFloat}
-    A[:] = c.jaccons_eval(x)
+function jaccons_eval(c::ConstraintsFunction, x::Vector{T}) where {T<:AbstractFloat}
     c.nb_jaccons_eval += 1
-    return
+    return c.jaccons_eval(x)
 end
 
 # Auxialiry funcion to define EvaluationFunction with numerical jacobian
@@ -389,18 +387,28 @@ function box_constraints(x_low::Vector{T}, x_upp::Vector{T}) where {T<:AbstractF
     @assert(!(no_x_low && no_x_upp), "Bounds vectors are assumed to contain at least one finite element")
 
     if no_x_low && !no_x_upp
-        cons_w_ubounds(x::Vector{<:AbstractFloat}) = filter(isfinite,x_upp-x)
-        jaccons_w_ubounds(x::Vector{<:AbstractFloat}) = Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:]
+        upp_rows = filter(i -> isfinite(x_upp[i]), 1:n)
+        J_upp = -sparse(1:length(upp_rows), upp_rows, ones(eltype(x_upp), length(upp_rows)), length(upp_rows), n)
+        cons_w_ubounds(x::Vector{<:AbstractFloat}) = filter(isfinite, x_upp - x)
+        jaccons_w_ubounds(x::Vector{<:AbstractFloat}) = J_upp
         return cons_w_ubounds, jaccons_w_ubounds
-    
+
     elseif !no_x_low && no_x_upp
-        cons_w_lbounds(x::Vector{<:AbstractFloat}) = filter(isfinite, x-x_low)
-        jaccons_w_lbounds(x::Vector{<:AbstractFloat}) = Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:]
+        low_rows = filter(i -> isfinite(x_low[i]), 1:n)
+        J_low = sparse(1:length(low_rows), low_rows, ones(eltype(x_low), length(low_rows)), length(low_rows), n)
+        cons_w_lbounds(x::Vector{<:AbstractFloat}) = filter(isfinite, x - x_low)
+        jaccons_w_lbounds(x::Vector{<:AbstractFloat}) = J_low
         return cons_w_lbounds, jaccons_w_lbounds
-    
+
     else
-        cons_w_bounds(x::Vector{<:AbstractFloat}) = vcat(filter(isfinite, x-x_low), filter(isfinite, x_upp-x))
-        jaccons_w_bounds(x::Vector{<:AbstractFloat}) = vcat(Matrix{eltype(x_low)}(I,n,n)[filter(i-> isfinite(x_low[i]),1:n),:], Matrix{eltype(x_upp)}(-I,n,n)[filter(i-> isfinite(x_upp[i]),1:n),:])
+        low_rows = filter(i -> isfinite(x_low[i]), 1:n)
+        upp_rows = filter(i -> isfinite(x_upp[i]), 1:n)
+        n_low, n_upp = length(low_rows), length(upp_rows)
+        J_low = sparse(1:n_low, low_rows, ones(eltype(x_low), n_low), n_low, n)
+        J_upp = -sparse(1:n_upp, upp_rows, ones(eltype(x_upp), n_upp), n_upp, n)
+        J_bounds = vcat(J_low, J_upp)
+        cons_w_bounds(x::Vector{<:AbstractFloat}) = vcat(filter(isfinite, x - x_low), filter(isfinite, x_upp - x))
+        jaccons_w_bounds(x::Vector{<:AbstractFloat}) = J_bounds
         return cons_w_bounds, jaccons_w_bounds
     end
 end
