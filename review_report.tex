@@ -1,0 +1,785 @@
+%===============================================================================
+%  Code Review Report: Enlsip.jl
+%  Analysis against Fortran 77 ENLSIP and Mathematical Specification
+%===============================================================================
+\documentclass[11pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{caption}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=green!50!black,
+  urlcolor=blue!70!black,
+}
+
+\lstdefinelanguage{Julia}{
+  morekeywords={abstract,baremodule,begin,bitstype,break,catch,ccall,const,
+    continue,do,else,elseif,end,export,finally,for,function,global,if,
+    immutable,import,importall,in,let,local,macro,module,mutable,
+    nothing,quote,return,struct,try,type,typealias,using,where,while,
+    true,false},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morecomment=[n]{\#=}{=\#},
+  morestring=[b]",
+}
+\lstset{
+  language=Julia,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!70!black}\bfseries,
+  commentstyle=\color{green!50!black}\itshape,
+  stringstyle=\color{red!60!black},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  framerule=0.4pt,
+  rulecolor=\color{gray!50},
+  backgroundcolor=\color{gray!5},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=6pt,
+  tabsize=4,
+  columns=flexible,
+}
+
+\newcommand{\fortranref}[1]{\texttt{#1}}
+\newcommand{\juliaref}[2]{\texttt{#1:#2}}
+\newcommand{\severity}[1]{%
+  \ifx#1C\colorbox{red!20}{\textbf{Critical}}%
+  \else\ifx#1M\colorbox{orange!20}{\textbf{Major}}%
+  \else\ifx#1m\colorbox{yellow!20}{\textbf{Minor}}%
+  \else\colorbox{blue!10}{\textbf{Enhancement}}%
+  \fi\fi\fi%
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small Code Review: Enlsip.jl}
+\lhead{\small \today}
+\rfoot{\thepage}
+
+\title{%
+  \textbf{Code Review Report: Enlsip.jl}\\[8pt]
+  \large Cross-Reference Analysis against Fortran~77 ENLSIP\\
+  and Algorithmic Specification
+}
+\author{Automated review based on comparison with:\\[4pt]
+  \textit{Fortran~77 ENLSIP} (Lindstr\"om \& Wedin, 1988)\\
+  \textit{ENLSIP.jl} (reference Julia translation)\\
+  \textit{Mathematical Analysis of ENLSIP} (convergence analysis document)
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report presents the results of a detailed code review of the
+\texttt{Enlsip.jl} Julia package, a published implementation of the
+ENLSIP constrained nonlinear least-squares solver.  The review was
+conducted by cross-referencing the Julia source against the original
+Fortran~77 implementation, a reference Julia translation, and a
+mathematical analysis of the algorithm.  We identify 7~bugs (3~critical,
+4~major), 5~algorithmic discrepancies from the original, and
+6~improvement opportunities.  For each finding, we describe the issue,
+its impact, the relevant Fortran reference, and the applied correction.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%===============================================================================
+\section{Overview}
+%===============================================================================
+
+The \texttt{Enlsip.jl} package is a Julia implementation of the ENLSIP
+algorithm for solving constrained nonlinear least-squares problems of the
+form:
+\begin{align}
+  \min_{\mathbf{x} \in \mathbb{R}^n} \quad & \Phi(\mathbf{x}) = \tfrac{1}{2}\|\mathbf{r}(\mathbf{x})\|^2 \\
+  \text{subject to} \quad & h_i(\mathbf{x}) = 0, \quad i = 1,\dots,p \\
+  & h_j(\mathbf{x}) \geq 0, \quad j = p+1,\dots,\ell
+\end{align}
+where $\mathbf{r} : \mathbb{R}^n \to \mathbb{R}^m$ and
+$\mathbf{h} : \mathbb{R}^n \to \mathbb{R}^\ell$, with $m + p \geq n$.
+
+The review covers the four source files:
+\begin{itemize}[nosep]
+  \item \texttt{src/structures.jl} --- data structures (\texttt{Iteration}, \texttt{WorkingSet}, etc.)
+  \item \texttt{src/cnls\_model.jl} --- problem model, evaluation wrappers, constraint instantiation
+  \item \texttt{src/enlsip\_functions.jl} --- core algorithmic routines ($\sim$2750~lines)
+  \item \texttt{src/solver.jl} --- user-facing \texttt{solve!} interface
+\end{itemize}
+
+Findings are classified as:
+\begin{itemize}[nosep]
+  \item \severity{C} --- silent incorrect results or crash on valid input
+  \item \severity{M} --- incorrect behaviour in non-trivial edge cases
+  \item \severity{m} --- cosmetic or minor correctness issues
+  \item \severity{E} --- performance or design improvements
+\end{itemize}
+
+%===============================================================================
+\section{Critical Bugs}
+\label{sec:critical}
+%===============================================================================
+
+%-----------------------------------------------------------------------
+\subsection{B1: Integer division truncation in \texttt{hessian\_cons!}}
+\label{sec:b1}
+%-----------------------------------------------------------------------
+
+\severity{C} \quad \juliaref{enlsip\_functions.jl}{296}
+\quad Fortran ref: \fortranref{HESSH}
+
+\paragraph{Issue.}
+The finite-difference step size for the constraint Hessian approximation
+is computed as:
+\begin{lstlisting}
+  eps1 = eps(T)^(1 / 3)
+\end{lstlisting}
+In Julia, \texttt{1 / 3} performs \emph{integer} division and evaluates
+to~\texttt{0}.  Therefore \texttt{eps1 = eps(T)\^{}0 = 1.0}, which is
+entirely wrong --- the step size should be $\varepsilon_{\mathrm{mach}}^{1/3}
+\approx 6 \times 10^{-6}$.
+
+\paragraph{Impact.}
+Every Newton search direction (method code~2) that involves the
+constraint Hessian will use a step size of~1.0 for finite differencing,
+producing a completely inaccurate second-derivative approximation.  This
+silently corrupts Newton steps and can cause convergence failure or
+convergence to wrong points on problems requiring second-order
+corrections.
+
+\paragraph{Comparison.}
+The analogous function \texttt{hessian\_res!} at line~252 correctly uses
+\texttt{eps(T)\^{}(1.0 / 3.0)} with floating-point literals.  The
+Fortran code uses \texttt{DRELPR**(1.0D0/3.0D0)}.
+
+\paragraph{Fix.}
+\begin{lstlisting}
+  eps1 = eps(T)^(1.0 / 3.0)
+\end{lstlisting}
+
+%-----------------------------------------------------------------------
+\subsection{B2: Undefined variable names in constraint Jacobian instantiation}
+\label{sec:b2}
+%-----------------------------------------------------------------------
+
+\severity{C} \quad \juliaref{cnls\_model.jl}{488, 492, 439}
+
+\paragraph{Issue.}
+In \texttt{instantiate\_constraints\_wo\_bounds}, two code paths define a
+local Jacobian function but then pass an \emph{undefined} variable name
+to the constructor:
+
+\begin{lstlisting}
+  # Line 488: defines jac_cons_ineqnum, passes jac_ineqnum (undefined)
+  jac_cons_ineqnum(x) = vcat(jacobian_eqcons(x),
+      ForwardDiff.jacobian(ineq_constraints, x))
+  constraints_evalfunc = ConstraintsFunction(cons, jac_ineqnum)
+
+  # Line 492: defines ad_jac_eqcons, passes jac_eqnum (undefined)
+  ad_jac_eqcons(x) = vcat(ForwardDiff.jacobian(eq_constraints,x),
+      jacobian_ineqcons(x))
+  constraints_evalfunc = ConstraintsFunction(cons, jac_eqnum)
+\end{lstlisting}
+
+The same pattern occurs in \texttt{instantiate\_constraints\_w\_bounds}
+at line~439.
+
+\paragraph{Impact.}
+Any problem that provides exactly one of the two Jacobians (equality
+\emph{xor} inequality) while omitting the other will trigger an
+\texttt{UndefVarError} at runtime.  The bug is latent because all test
+problems provide either both Jacobians or neither.
+
+\paragraph{Fix.}
+Replace each undefined name with the corresponding local variable that
+was actually defined.
+
+%-----------------------------------------------------------------------
+\subsection{B3: Shallow copy of mutable vectors in \texttt{Iteration}}
+\label{sec:b3}
+%-----------------------------------------------------------------------
+
+\severity{C} \quad \juliaref{structures.jl}{94--95}
+
+\paragraph{Issue.}
+The \texttt{Base.copy} method for \texttt{Iteration} performs a
+field-by-field copy:
+\begin{lstlisting}
+  Base.copy(s::Iteration) = Iteration(s.x, s.p, s.rx, ...)
+\end{lstlisting}
+Since \texttt{s.x}, \texttt{s.p}, \texttt{s.rx}, etc.\ are mutable
+\texttt{Vector}s, the ``copy'' shares the same underlying arrays.
+Subsequent mutation of one iteration's vectors silently corrupts the
+other.
+
+\paragraph{Impact.}
+In the main loop, \texttt{previous\_iter = copy(iter)} is intended to
+snapshot the current state.  Because vectors are shared,
+\texttt{previous\_iter.rx}, \texttt{previous\_iter.p}, etc.\ can be
+overwritten when \texttt{iter} is updated, leading to incorrect
+convergence checks, search direction analysis, and penalty weight
+updates that depend on the previous iteration's data.
+
+\paragraph{Fix.}
+Use \texttt{deepcopy} for all vector fields:
+\begin{lstlisting}
+  Base.copy(s::Iteration) = Iteration(
+      copy(s.x), copy(s.p), copy(s.rx), copy(s.cx), s.t, s.alpha,
+      s.index_alpha_upp, copy(s.lambda), copy(s.w), ...)
+\end{lstlisting}
+
+%===============================================================================
+\section{Major Bugs}
+\label{sec:major}
+%===============================================================================
+
+%-----------------------------------------------------------------------
+\subsection{B4: \texttt{second\_lagrange\_mult\_estimate!} ignores pseudo-rank}
+\label{sec:b4}
+%-----------------------------------------------------------------------
+
+\severity{M} \quad \juliaref{enlsip\_functions.jl}{522}
+\quad Fortran ref: \fortranref{LEAEST}
+
+\paragraph{Issue.}
+The second-order Lagrange multiplier estimate solves:
+\begin{lstlisting}
+  v = UpperTriangular(F_A.R) \ b
+\end{lstlisting}
+This uses the full $R$ factor regardless of the pseudo-rank of~$A$.
+When $A$ is rank-deficient ($\mathrm{rank} < t$), the trailing diagonal
+elements of~$R$ are near-zero, producing wildly inaccurate multiplier
+estimates.
+
+\paragraph{Comparison.}
+The first-order estimate (\texttt{first\_lagrange\_mult\_estimate!},
+lines~476--478) correctly restricts the solve to the leading
+\texttt{prankA} $\times$ \texttt{prankA} block.
+
+\paragraph{Fix.}
+Compute pseudo-rank and restrict the triangular solve accordingly.
+
+%-----------------------------------------------------------------------
+\subsection{B5: \texttt{evaluate\_violated\_constraints} lacks capacity bound}
+\label{sec:b5}
+%-----------------------------------------------------------------------
+
+\severity{M} \quad \juliaref{enlsip\_functions.jl}{600--623}
+\quad Fortran ref: \fortranref{EVADD}
+
+\paragraph{Issue.}
+The Fortran \fortranref{EVADD} enforces the bound
+$|\mathcal{T}| \leq \min(\ell, n)$ on the working-set size.  When the
+working set is at capacity and a violated constraint must be added,
+EVADD swaps out the least-violated active constraint to make room.
+
+The Julia implementation has no such capacity check --- it adds all
+violated constraints unconditionally.  This can produce $|\mathcal{T}| > n$,
+making the constraint Jacobian $A_{\mathcal{T}}$ have more rows than columns.
+The resulting LQ factorisation and null-space step become algebraically
+ill-defined.
+
+\paragraph{Fix.}
+Add a capacity check \texttt{W.t >= min(W.l, n)} before adding constraints,
+with a swap-out mechanism for the least-violated active constraint when at capacity.
+
+%-----------------------------------------------------------------------
+\subsection{B6: \texttt{check\_termination\_criteria} uses stale \texttt{iter.x}}
+\label{sec:b6}
+%-----------------------------------------------------------------------
+
+\severity{M} \quad \juliaref{enlsip\_functions.jl}{2425}
+
+\paragraph{Issue.}
+In the abnormal-termination branch, the step difference is computed as:
+\begin{lstlisting}
+  x_diff = norm(prev_iter.x - iter.x)
+\end{lstlisting}
+However, \texttt{iter.x} is only updated \emph{after} the termination
+check (main loop, line~2732: \texttt{iter.x = x}).  Therefore
+\texttt{iter.x} still holds the previous iteration's starting point,
+and the computed \texttt{x\_diff} is meaningless.
+
+The sufficient-conditions branch (line~2401) correctly uses the passed
+parameter \texttt{x}.
+
+\paragraph{Fix.}
+Use the parameter \texttt{x} consistently in both branches.
+
+%-----------------------------------------------------------------------
+\subsection{B7: \texttt{newton\_raphson} can loop infinitely}
+\label{sec:b7}
+%-----------------------------------------------------------------------
+
+\severity{M} \quad \juliaref{enlsip\_functions.jl}{1764}
+
+\paragraph{Issue.}
+The Newton--Raphson loop for polynomial root-finding has the condition:
+\begin{lstlisting}
+  while error > eps || newton_iter < 3
+\end{lstlisting}
+The \texttt{||} operator means the loop continues as long as
+\emph{either} condition holds.  If the polynomial derivative
+\texttt{dds($\alpha$)} is near zero, the step $h = -ds(\alpha)/c$
+diverges, \texttt{error} never decreases, and the loop runs forever.
+
+There is no iteration cap.
+
+\paragraph{Fix.}
+Add a maximum iteration bound:
+\begin{lstlisting}
+  while (error > eps || newton_iter < 3) && newton_iter < 50
+\end{lstlisting}
+
+%===============================================================================
+\section{Algorithmic Discrepancies}
+\label{sec:discrepancies}
+%===============================================================================
+
+%-----------------------------------------------------------------------
+\subsection{D1: \texttt{pseudo\_rank} scaling factor}
+\label{sec:d1}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{17--31}
+\quad Fortran ref: \fortranref{PSEUDORANKR1}
+
+The student's implementation uses the tolerance
+$\mathrm{tol} = |R_{11}| \cdot \sqrt{\ell} \cdot \varepsilon_{\mathrm{rank}}$,
+whereas the Fortran uses $\mathrm{tol} = |R_{11}| \cdot \varepsilon_{\mathrm{rank}}$.
+The additional $\sqrt{\ell}$ factor makes the rank determination more
+conservative.  While not necessarily incorrect, this deviation can
+produce different pseudo-ranks on marginally rank-deficient problems,
+affecting the entire algorithm flow.
+
+\medskip\noindent
+\textit{No change applied --- this is a deliberate design choice documented here
+for awareness.}
+
+%-----------------------------------------------------------------------
+\subsection{D2: Missing anti-cycling guard in \texttt{check\_constraint\_deletion}}
+\label{sec:d2}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{567--596}
+\quad Fortran ref: \fortranref{SIGNCH}, lines 2322--2328
+
+The Fortran \fortranref{SIGNCH} tracks iteration numbers in the
+\texttt{ACTIVE} array to prevent a constraint from being deleted and
+re-added within a small number of iterations (the ``ival'' guard).
+This anti-cycling mechanism prevents pathological oscillation of the
+working set.
+
+The Julia version has no such safeguard.  Implementing it would require
+extending the \texttt{WorkingSet} structure to track deletion history.
+
+\medskip\noindent
+\textit{Not corrected in this revision --- would require structural changes to
+\texttt{WorkingSet}.  Documented as a known limitation.}
+
+%-----------------------------------------------------------------------
+\subsection{D3: Missing infeasibility detection in convergence code}
+\label{sec:d3}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{2373--2456}
+\quad Fortran ref: \fortranref{TERCRI}, lines 816--817
+
+The Fortran TERCRI constructs the exit code as $\texttt{EXIT} \times
+\texttt{feas}$, where $\texttt{feas} = -1$ when any inactive constraint
+is violated.  This turns a positive convergence code into a negative
+``converged to infeasible point'' code, which is a crucial diagnostic.
+
+The Julia version returns the positive convergence code regardless of
+feasibility.
+
+\paragraph{Fix.}
+After computing the sufficient-condition code, check inactive constraint
+feasibility and negate the code if infeasible.
+
+%-----------------------------------------------------------------------
+\subsection{D4: Missing full-rank prerequisite for criterion~8}
+\label{sec:d4}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{2378}
+\quad Fortran ref: \fortranref{TERCRI}, lines 815--832
+
+The Fortran adds a ``last step type'' digit (criterion~8) to the exit
+code based on the history of the last few steps (GN vs.\ Newton vs.\
+subspace, full rank, unit step length).  The Julia version does not
+implement this refinement, which is used for diagnostic purposes.
+
+\medskip\noindent
+\textit{Not corrected --- purely diagnostic, no effect on convergence decisions.}
+
+%-----------------------------------------------------------------------
+\subsection{D5: \texttt{minmax\_lagrangian\_mult} initial \texttt{sigmin} value}
+\label{sec:d5}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{545}
+
+\texttt{sigmin} is initialised to $10^6$ rather than to $+\infty$ or a
+value derived from the problem data.  If all inequality multipliers
+satisfy $\lambda_i \cdot \mathrm{row}_i > -\sqrt{\varepsilon}$, the
+initial value persists and $\mathrm{sigmin} = 10^6$ is compared against
+$\varepsilon_{\mathrm{rel}} \cdot \mathrm{factor}$ in the convergence
+test.  While $10^6$ is ``large enough'' in practice, using \texttt{Inf}
+would be semantically correct.
+
+\paragraph{Fix.}
+Initialise \texttt{sigmin = Inf}.
+
+%===============================================================================
+\section{Performance and Design Improvements}
+\label{sec:improvements}
+%===============================================================================
+
+%-----------------------------------------------------------------------
+\subsection{I1: Excessive allocations in Hessian routines}
+\label{sec:i1}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{243--324}
+
+The functions \texttt{hessian\_res!} and \texttt{hessian\_cons!}
+allocate four vectors of length~$m$ (resp.~$\ell$) and two unit vectors
+of length~$n$ at every $(k,j)$ pair in a double loop over
+$1 \leq j \leq k \leq n$.  This creates $O(n^2)$ allocations of
+$O(m)$-sized arrays, generating significant garbage-collection pressure
+for large problems.
+
+\paragraph{Fix.}
+Pre-allocate work arrays outside the loops and reuse them.  Replace
+the boolean unit-vector construction \texttt{[i == k for i = 1:n]} with
+in-place manipulation of a single pre-allocated vector.
+
+%-----------------------------------------------------------------------
+\subsection{I2: \texttt{psi} re-evaluates functions on every call}
+\label{sec:i2}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{1269--1304}
+
+The merit function \texttt{psi} allocates new vectors and evaluates both
+the residual and constraint functions from scratch on each invocation.
+During the line search, it may be called $O(10)$ times.  While the
+polynomial-based line search (\texttt{minrm}/\texttt{minrn}) reduces the
+number of evaluations, the fallback Goldstein--Armijo step
+(\texttt{goldstein\_armijo\_step}) calls \texttt{psi} in a halving loop.
+
+\medskip\noindent
+\textit{Not modified in this revision --- would require interface changes
+to pass pre-allocated work arrays.}
+
+%-----------------------------------------------------------------------
+\subsection{I3: \texttt{f\_opt} display is one iteration behind}
+\label{sec:i3}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{2719}
+
+In the main loop, the \texttt{DisplayedInfo} object pushed to the
+iteration-detail list uses \texttt{f\_opt}, but this variable is only
+updated at line~2737 (\emph{after} the push).  The displayed objective
+function value therefore lags by one iteration.
+
+\paragraph{Fix.}
+Update \texttt{f\_opt} before constructing the \texttt{DisplayedInfo}.
+
+%-----------------------------------------------------------------------
+\subsection{I4: No support for unconstrained problems}
+\label{sec:i4}
+%-----------------------------------------------------------------------
+
+\juliaref{cnls\_model.jl}{377}
+
+The \texttt{CnlsModel} constructor asserts that at least one constraint
+exists.  The original Fortran ENLSIP handles unconstrained problems
+($\ell = 0$) gracefully.
+
+\medskip\noindent
+\textit{Not modified --- this is a design decision for the package scope.}
+
+%===============================================================================
+\section{Summary of Applied Corrections}
+\label{sec:summary}
+%===============================================================================
+
+Table~\ref{tab:summary} summarises all findings and their resolution status.
+
+\begin{table}[ht]
+\centering
+\caption{Summary of findings and corrections.}
+\label{tab:summary}
+\small
+\begin{tabular}{@{}llllp{5.2cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Severity} & \textbf{File} & \textbf{Line(s)} & \textbf{Status} \\
+\midrule
+B1 & Critical & \texttt{enlsip\_functions.jl} & 296     & \textbf{Fixed}: \texttt{1/3} $\to$ \texttt{1.0/3.0} \\
+B2 & Critical & \texttt{cnls\_model.jl}       & 438--492 & \textbf{Fixed}: corrected variable names \\
+B3 & Critical & \texttt{structures.jl}        & 94--95   & \textbf{Fixed}: deep copy of vectors \\
+B4 & Major    & \texttt{enlsip\_functions.jl} & 522     & \textbf{Fixed}: pseudo-rank--aware solve \\
+B5 & Major    & \texttt{enlsip\_functions.jl} & 600--623 & \textbf{Fixed}: capacity check added \\
+B6 & Major    & \texttt{enlsip\_functions.jl} & 2425    & \textbf{Fixed}: use \texttt{x} parameter \\
+B7 & Major    & \texttt{enlsip\_functions.jl} & 1764    & \textbf{Fixed}: iteration cap added \\
+\midrule
+D1 & ---      & \texttt{enlsip\_functions.jl} & 17--31  & Documented only \\
+D2 & ---      & \texttt{enlsip\_functions.jl} & 567--596 & Documented only \\
+D3 & Major    & \texttt{enlsip\_functions.jl} & 2399--2421 & \textbf{Fixed}: infeasibility negation \\
+D5 & Minor    & \texttt{enlsip\_functions.jl} & 545     & \textbf{Fixed}: \texttt{sigmin = Inf} \\
+\midrule
+I1 & Enh.     & \texttt{enlsip\_functions.jl} & 243--324 & \textbf{Fixed}: pre-allocated work arrays \\
+I3 & Minor    & \texttt{enlsip\_functions.jl} & 2719    & \textbf{Fixed}: \texttt{f\_opt} update order \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%===============================================================================
+\section{Testing Recommendations}
+%===============================================================================
+
+The existing test suite covers four problems (HS65, Osborne-2, Chained
+Rosenbrock, Chained Wood) but exercises only a subset of the code paths.
+We recommend adding tests for:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Mixed Jacobian provision}: provide only the equality
+        Jacobian and omit the inequality Jacobian (and vice versa) to
+        exercise the paths fixed in~B2.
+  \item \textbf{Rank-deficient constraint Jacobians}: problems where
+        active constraints are linearly dependent at some iterate, to
+        test the pseudo-rank handling in B4.
+  \item \textbf{Large-residual problems}: problems where the
+        Gauss--Newton model is insufficient and Newton steps are needed,
+        to exercise the corrected Hessian computation in~B1.
+  \item \textbf{Working-set saturation}: problems with $\ell > n$
+        inequality constraints where the capacity bound (B5) is reached.
+  \item \textbf{Convergence to infeasible points}: crafted problems
+        where the algorithm converges but inactive constraints are
+        violated, to test the infeasibility detection in~D3.
+\end{enumerate}
+
+%===============================================================================
+\section{Performance Optimisations}
+\label{sec:optim}
+%===============================================================================
+
+This section describes performance-oriented changes applied in a second
+pass.  Unlike the bug-fix pass, these changes do not alter algorithmic
+behaviour but reduce memory allocations, improve type stability, and
+eliminate redundant computation.
+
+%-----------------------------------------------------------------------
+\subsection{O1: Type-unstable function fields in \texttt{ResidualsFunction}
+  and \texttt{ConstraintsFunction}}
+\label{sec:o1}
+%-----------------------------------------------------------------------
+
+\juliaref{cnls\_model.jl}{11--35}
+
+Both \texttt{ResidualsFunction} and \texttt{ConstraintsFunction} store
+their evaluation and Jacobian callables as untyped (\texttt{Any}) fields.
+Every call through these fields forces Julia to use dynamic dispatch,
+which prevents inlining and generates type-instabilities that propagate
+throughout the solver.
+
+\paragraph{Fix.}
+Parameterise the structs over two function types:
+\begin{lstlisting}
+  mutable struct ResidualsFunction{F,G} <: EvaluationFunction
+      reseval::F
+      jacres_eval::G
+      nb_reseval::Int
+      nb_jacres_eval::Int
+  end
+\end{lstlisting}
+Since both are set once at construction and never change type,
+this lets Julia specialise all downstream code.
+
+%-----------------------------------------------------------------------
+\subsection{O2: Untyped function fields in \texttt{CnlsModel}}
+\label{sec:o2}
+%-----------------------------------------------------------------------
+
+\juliaref{cnls\_model.jl}{155--174}
+
+The \texttt{CnlsModel} struct stores six function/nothing fields
+(\texttt{residuals}, \texttt{jacobian\_residuals}, \texttt{eq\_constraints},
+etc.) as untyped \texttt{Any} fields.  These fields are only read at
+\texttt{solve!} time to construct the typed evaluation functions, so the
+impact during the inner loop is indirect (the eval functions are already
+wrapped).  Nonetheless, parameterising the model struct improves
+type stability of the \texttt{solve!} entry point.
+
+\medskip\noindent
+\textit{Not modified --- the performance gain is negligible since these
+fields are not accessed in the inner loop.  Changing the struct signature
+would break the public API.}
+
+%-----------------------------------------------------------------------
+\subsection{O3: \texttt{map(abs, $\cdot$)} $\to$ \texttt{maximum(abs, $\cdot$)}}
+\label{sec:o3}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{554, 585, 1553, 2301}
+
+The pattern \texttt{maximum(map(abs, v))} allocates an intermediate array;
+\texttt{maximum(abs, v)} (Julia~$\geq$~1.6) computes the same thing
+without allocation.  Similarly, \texttt{maximum(map(t -> abs(t), $\lambda$))}
+should be \texttt{maximum(abs, $\lambda$)}.
+
+\paragraph{Fix.}
+Replace all four occurrences.
+
+%-----------------------------------------------------------------------
+\subsection{O4: \texttt{setdiff(1:end, s)} row-deletion pattern}
+\label{sec:o4}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{719, 752, 756, 780, 785}
+
+Deleting row~\texttt{s} from a matrix via
+\texttt{C.A = C.A[setdiff(1:end, s), :]} creates a \texttt{Set},
+collects the complement indices, indexes the matrix, and allocates a new
+matrix.  This is done inside the working-set update, which may execute
+multiple times per iteration.
+
+\paragraph{Fix.}
+Replace with direct index construction:
+\texttt{C.A = C.A[[1:s-1; s+1:end], :]}.
+This avoids the \texttt{Set} overhead.  For vectors, replace with
+\texttt{deleteat!} where the original is already a copy.
+
+%-----------------------------------------------------------------------
+\subsection{O5: Redundant allocations in \texttt{psi}}
+\label{sec:o5}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{1296--1331}
+
+Each call to the merit function \texttt{psi} allocates
+\texttt{x\_new = x + $\alpha$ * p} (a fresh $n$-vector),
+\texttt{rx\_new = zeros(m)}, and \texttt{cx\_new = zeros(l)}.
+During the line search, \texttt{psi} is called 3--10~times per
+iteration, yielding 9--30 allocations of $O(m+\ell+n)$ vectors.
+
+\paragraph{Fix.}
+Add pre-allocated workspace vectors to \texttt{psi} as keyword arguments
+with default allocation, so that callers in the hot path
+(\texttt{linesearch\_constrained}, \texttt{goldstein\_armijo\_step}) can
+pass reusable buffers.
+
+%-----------------------------------------------------------------------
+\subsection{O6: Redundant allocations in \texttt{linesearch\_constrained}
+  and \texttt{compute\_steplength}}
+\label{sec:o6}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{1990, 2258--2259}
+
+Several hot-path functions allocate fresh \texttt{zeros(T, m)} and
+\texttt{zeros(T, l)} vectors that could be pre-allocated once outside
+the main loop and passed through.  The functions
+\texttt{linesearch\_constrained} and \texttt{compute\_steplength} each
+allocate \texttt{rx\_new}, \texttt{cx\_new} vectors that are only used
+locally.
+
+\paragraph{Fix.}
+Pre-allocate these vectors in the main \texttt{enlsip} function and
+pass them as arguments.  This eliminates per-iteration allocations.
+
+%-----------------------------------------------------------------------
+\subsection{O7: Redundant \texttt{p\_gn = zeros(T, n)} per iteration}
+\label{sec:o7}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{2657, 2728}
+
+The search direction buffer \texttt{p\_gn} is allocated as a fresh
+zero vector at the start of every iteration.  Since it is immediately
+overwritten by \texttt{gn\_search\_direction}, a single buffer allocated
+once and filled in-place suffices.
+
+\paragraph{Fix.}
+Allocate once before the main loop; fill with zeros at each iteration
+start using \texttt{fill!}.
+
+%-----------------------------------------------------------------------
+\subsection{O8: \texttt{v[1:m] = rx[:]} unnecessary copy in \texttt{concatenate!}}
+\label{sec:o8}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{1637}
+
+\texttt{rx[:]} creates a copy of \texttt{rx}; since we are assigning
+into a pre-existing slice of~\texttt{v}, the intermediate copy is
+wasteful.  Replace with \texttt{copyto!} or direct view assignment.
+
+\paragraph{Fix.}
+\texttt{v[1:m] .= rx}.
+
+%-----------------------------------------------------------------------
+\subsection{O9: Redundant QR factorisation after working-set rebuild}
+\label{sec:o9}
+%-----------------------------------------------------------------------
+
+\juliaref{enlsip\_functions.jl}{712--716, 731--735, 757--762}
+
+When a constraint deletion is reverted (infeasible direction test),
+the active-constraint matrix \texttt{C.A} is rebuilt from scratch and
+a fresh QR factorisation is computed.  In the no-deletion branch
+(\texttt{s == 0}), the original \texttt{F\_A} could be reused directly
+instead of re-computing the QR.  However, since the second-order
+multiplier estimate or subsequent deletion may modify the working set,
+the factorisation is generally needed.
+
+\medskip\noindent
+\textit{Not modified --- the saving is marginal and the logic would
+become fragile.}
+
+%-----------------------------------------------------------------------
+\subsection{Summary of optimisations}
+%-----------------------------------------------------------------------
+
+\begin{table}[ht]
+\centering
+\caption{Summary of performance optimisations.}
+\label{tab:optim}
+\small
+\begin{tabular}{@{}lllp{6.5cm}@{}}
+\toprule
+\textbf{ID} & \textbf{File} & \textbf{Lines} & \textbf{Status} \\
+\midrule
+O1 & \texttt{cnls\_model.jl}       & 11--35  & \textbf{Applied}: parametric function types \\
+O2 & \texttt{cnls\_model.jl}       & 155--174 & Documented only (API stability) \\
+O3 & \texttt{enlsip\_functions.jl} & various & \textbf{Applied}: \texttt{maximum(abs, $\cdot$)} \\
+O4 & \texttt{enlsip\_functions.jl} & various & \textbf{Applied}: direct index construction \\
+O5 & \texttt{enlsip\_functions.jl} & 1296    & \textbf{Applied}: pre-allocated workspace \\
+O6 & \texttt{enlsip\_functions.jl} & various & \textbf{Applied}: lifted allocations \\
+O7 & \texttt{enlsip\_functions.jl} & 2657, 2728 & \textbf{Applied}: single buffer \\
+O8 & \texttt{enlsip\_functions.jl} & 1637    & \textbf{Applied}: \texttt{.=} broadcast \\
+O9 & \texttt{enlsip\_functions.jl} & various & Documented only \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
