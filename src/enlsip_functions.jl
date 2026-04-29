@@ -551,7 +551,7 @@ function minmax_lagrangian_mult(
     sigmin = T(Inf)
 
     if t > q
-        λ_abs_max = maximum(map(abs,λ))
+        λ_abs_max = maximum(abs, λ)
         rows = (scaling ? 1.0 ./ diag_scale : diag_scale)
         for i = q+1:t
             λ_i = λ[i]
@@ -582,7 +582,7 @@ function check_constraint_deletion(
     t = size(A, 1)
     δ = 10.0
     τ = 0.5
-    λ_max = (isempty(λ) ? 1.0 : maximum(map(t -> abs(t), λ)))
+    λ_max = (isempty(λ) ? 1.0 : maximum(abs, λ))
     sq_rel = sqrt(eps(eltype(λ))) * λ_max
     s = 0
     
@@ -622,6 +622,7 @@ function evaluate_violated_constraints(
             k = W.inactive[i]
             if cx[k] < ε || (k == index_α_upp && cx[k] < δ)
                 if W.t >= bnd
+                    # Working set at capacity: swap out the least-violated active inequality
                     worst_k = 0
                     worst_val = -Inf
                     for j = W.q+1:W.t
@@ -715,9 +716,9 @@ function update_working_set(
         remove_constraint!(W, s)
         iter_k.del = true
         iter_k.index_del = index_s
-        C.A = C.A[setdiff(1:end, s), :]
+        C.A = C.A[[1:s-1; s+1:end], :]
         vect_P1 = F_A.p[:]
-        
+
         F_A = qr((C.A)',ColumnNorm())
         rankA = pseudo_rank(diag(F_A.R), ε_rank)
         F_L11 = qr(F_A.R', ColumnNorm())
@@ -748,11 +749,11 @@ function update_working_set(
                     index_s2 = W.active[s2]
                     deleteat!(λ, s2)
                     deleteat!(C.diag_scale, s2)
-                    C.cx = C.cx[setdiff(1:end, s2)]
+                    C.cx = C.cx[[1:s2-1; s2+1:end]]
                     remove_constraint!(W, s2)
                     iter_k.del = true
                     iter_k.index_del = index_s2
-                    C.A = C.A[setdiff(1:end, s2), :]
+                    C.A = C.A[[1:s2-1; s2+1:end], :]
                     vect_P1 = F_A.p[:]
                     F_A = qr((C.A)',ColumnNorm())
                     
@@ -776,12 +777,12 @@ function update_working_set(
                 index_s2 = W.active[s2]
                 deleteat!(λ, s2)
                 deleteat!(C.diag_scale, s2)
-                C.cx = C.cx[setdiff(1:end, s2)]
+                C.cx = C.cx[[1:s2-1; s2+1:end]]
                 remove_constraint!(W, s2)
                 iter_k.del = true
                 iter_k.index_del = index_s2
                 vect_P1 = F_A.p[:]
-                C.A = C.A[setdiff(1:end, s2), :]
+                C.A = C.A[[1:s2-1; s2+1:end], :]
                 F_A = qr((C.A)',ColumnNorm())
                 rankA = pseudo_rank(diag(F_A.R), ε_rank)
                 F_L11 = qr(F_A.R', ColumnNorm())
@@ -1204,7 +1205,8 @@ function search_direction_analys(
     working_set::WorkingSet,
     F_A::Factorization,
     F_L11::Factorization,
-    F_J2::Factorization) where {T}
+    F_J2::Factorization,
+    second_derivatives::Bool) where {T}
 
     # Data
     (m,n) = size(J)
@@ -1254,16 +1256,27 @@ function search_direction_analys(
             method_code = 1
         end
 
-        # Search direction computed with the method of Newton
+        # Search direction computed with Newton method
     elseif method_code == 2
-        p, newton_error = newton_search_direction(x, c, r, active_cx, working_set, λ, rx, J, F_A, F_L11, rankA)
-        b, d = b_gn, d_gn
-        dimA = -working_set.t
-        dimJ2 = working_set.t - n
-        current_iter.nb_newton_steps += 1
-        if newton_error
-            error_code = -3
+
+        if second_derivatives
+            p, newton_error = newton_search_direction(x, c, r, active_cx, working_set, λ, rx, J, F_A, F_L11, rankA)
+            b, d = b_gn, d_gn
+            dimA = -working_set.t
+            dimJ2 = working_set.t - n
+            current_iter.nb_newton_steps += 1
+            if newton_error
+                error_code = -3
+            end
+        else
+            #= No second derivatives allowed so the algorithm ends there
+            The following values correpsond to the full rank Gauss-Newton
+            It is an arbitrary choice since the algorithm will stop anyway =#
+            p, b, d = p_gn, b_gn, d_gn
+            dimA, dimJ2 = rankA, rankJ2
+            error_code = -4
         end
+
     end
 
     # Update of infos about search direction computation
@@ -1303,30 +1316,28 @@ function psi(
     l::Int,
     t::Int,
     active::Vector{Int},
-    inactive::Vector{Int}) where {T}
+    inactive::Vector{Int};
+    rx_buf::Vector{T} = zeros(T, m),
+    cx_buf::Vector{T} = zeros(T, l)) where {T}
 
-    rx_new, cx_new = zeros(T, m), zeros(T, l)
     penalty_constraint_sum = zero(T)
 
-    #Evaluate residuals and constraints at point x+αp
     x_new = x + α * p
-    res_eval!(r,x_new,rx_new)
-    cons_eval!(c,x_new,cx_new)
+    res_eval!(r, x_new, rx_buf)
+    cons_eval!(c, x_new, cx_buf)
 
-    # First part of sum with active constraints
     for i = 1:t
         j = active[i]
-        penalty_constraint_sum += w[j] * cx_new[j]^2
+        penalty_constraint_sum += w[j] * cx_buf[j]^2
     end
 
-    # Second part of sum with inactive constraints
     for i = 1:l-t
         j = inactive[i]
-        if cx_new[j] < 0.0
-            penalty_constraint_sum += w[j] * cx_new[j]^2
+        if cx_buf[j] < 0.0
+            penalty_constraint_sum += w[j] * cx_buf[j]^2
         end
     end
-    return 0.5 * (dot(rx_new, rx_new) + penalty_constraint_sum)
+    return 0.5 * (dot(rx_buf, rx_buf) + penalty_constraint_sum)
 end
 
 # ASSORT
@@ -1549,7 +1560,7 @@ function penalty_weight_update(
     t = work_set.t
 
     nrm_Ap = sqrt(dot(Ap, Ap))
-    nrm_cx = (isempty(cx[active[1:dimA]]) ? 0.0 : max(0,maximum(map(abs,cx[active[1:dimA]]))))
+    nrm_cx = (isempty(cx[active[1:dimA]]) ? 0.0 : max(0, maximum(abs, cx[active[1:dimA]])))
     nrm_Jp = sqrt(dot(Jp, Jp))
     nrm_rx = sqrt(dot(rx,rx))
 
@@ -1633,7 +1644,7 @@ function concatenate!(v::Vector{T},
     active::Vector{<:Int},
     inactive::Vector{<:Int}) where {T}
 
-    v[1:m] = rx[:]
+    v[1:m] .= rx
     if t != 0
         for i = 1:t
             k = active[i]
@@ -1899,15 +1910,17 @@ function goldstein_armijo_step(
     l::Int,
     t::Int,
     active::Vector{Int},
-    inactive::Vector{Int}) where {T}
+    inactive::Vector{Int};
+    rx_buf::Vector{T} = zeros(T, m),
+    cx_buf::Vector{T} = zeros(T, l)) where {T}
 
     u = α0
     sqr_ε = sqrt(eps(typeof(u)))
     exit = (p_max * u < sqr_ε) || (u <= α_min)
-    ψu = psi(x, u, p, r, c, w, m, l, t, active, inactive)
+    ψu = psi(x, u, p, r, c, w, m, l, t, active, inactive; rx_buf=rx_buf, cx_buf=cx_buf)
     while !exit && (ψu > ψ0 + τ * u * dψ0)
         u *= 0.5
-        ψu = psi(x, u, p, r, c, w, m, l, t, active, inactive)
+        ψu = psi(x, u, p, r, c, w, m, l, t, active, inactive; rx_buf=rx_buf, cx_buf=cx_buf)
         exit = (p_max * u < sqr_ε) || (u <= α_min)
     end
     return u, exit
@@ -1951,6 +1964,14 @@ function linesearch_constrained(
     l, t = work_set.l, work_set.t
     active, inactive = work_set.active, work_set.inactive
 
+    # Pre-allocate workspace buffers
+    psi_rx = zeros(T, m)
+    psi_cx = zeros(T, l)
+    rx_new = zeros(T, m)
+    cx_new = zeros(T, l)
+    v0 = zeros(T, m + l)
+    v2 = zeros(T, m + l)
+
     # LINC1
     # Set values of constants and compute α_min, α_max and α_k
 
@@ -1981,16 +2002,16 @@ function linesearch_constrained(
         end
     end
 
-    ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive)
+    ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
 
     diff_psi = ψ0 - ψ_k
 
     x_new = x + α_k * p
-    rx_new, cx_new = zeros(T,m), zeros(T,l)
     res_eval!(r,x_new,rx_new)
     cons_eval!(c,x_new,cx_new)
 
-    v0, v2 = zeros(T,m + l), zeros(m + l)
+    fill!(v0, zero(T))
+    fill!(v2, zero(T))
     coefficients_linesearch!(v0, v1, v2, α_k, rx, cx, rx_new, cx_new, w, m, t, l, active, inactive)
 
     # Set x_min = the best of the points 0 and α0
@@ -2016,7 +2037,7 @@ function linesearch_constrained(
     α_km1 = α_k
     ψ_km1 = ψ_k
     α_k = α_kp1
-    ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive)
+    ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
 
     # Test termination condition at α0
 
@@ -2041,8 +2062,8 @@ function linesearch_constrained(
             α_km1 = α_k
             ψ_km1 = ψ_k
             α_k = α_kp1
-            
-            ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive)
+
+            ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
             diff_psi = ψ0 - ψ_k
             reduction_likely = check_reduction(ψ_km1, ψ_k, pk, η, diff_psi)
         end
@@ -2064,7 +2085,8 @@ function linesearch_constrained(
                 x_new = x + α_k * p
                 res_eval!(r,x_new,rx_new)
                 cons_eval!(c,x_new,cx_new)
-                v0, v2 = zeros(T,m + l), zeros(T,m + l)
+                fill!(v0, zero(T))
+                fill!(v2, zero(T))
                 coefficients_linesearch!(v0, v1, v2, α_k, rx, cx, rx_new, cx_new, w, m, t, l, active, inactive)
                 α_kp1, pk, β, pβ = minrm(v0, v1, v2, x_min, α_min, α_max)
                 if α_kp1 != β && pβ < pk && β <= α_k
@@ -2088,7 +2110,7 @@ function linesearch_constrained(
             α_km1 = α_k
             ψ_km1 = ψ_k
             α_k = α_kp1
-            ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive)
+            ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
 
             # Check if essential reduction is likely
             reduction_likely = check_reduction(ψ_km1, ψ_k, pk, η, diff_psi)
@@ -2105,8 +2127,8 @@ function linesearch_constrained(
                 α_km1 = α_k
                 ψ_km1 = ψ_k
                 α_k = α_kp1
-                
-                ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive)
+
+                ψ_k = psi(x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
 
                 reduction_likely = check_reduction(ψ_km1, ψ_k, pk, η, diff_psi)
             end
@@ -2118,7 +2140,7 @@ function linesearch_constrained(
 
         else
             # Take a pure Goldstein-Armijo step
-            α_km1, gac_error = goldstein_armijo_step(ψ0, dψ0, α_min, τ, p_max, x, α_k, p, r, c, w, m, l, t, active, inactive)
+            α_km1, gac_error = goldstein_armijo_step(ψ0, dψ0, α_min, τ, p_max, x, α_k, p, r, c, w, m, l, t, active, inactive; rx_buf=psi_rx, cx_buf=psi_cx)
         end
     end
     α = α_km1
@@ -2254,8 +2276,8 @@ function compute_steplength(
             # Computation of new point and actual progress
             # Evaluate residuals and constraints at the new point
         
-            rx_new = zeros(T,m)
-            cx_new = zeros(T,work_set.l)
+            rx_new = zeros(T, m)
+            cx_new = zeros(T, work_set.l)
             x_new = x + α * p
             res_eval!(r,x_new,rx_new)
             cons_eval!(c,x_new,cx_new)
@@ -2297,7 +2319,7 @@ function check_derivatives(
     dψ_forward = (ψ_k - ψ0) / α
     dψ_backward = (ψ0 - ψ_mα) / α
     dψ_central = (ψ_k - ψ_mα) / (2*α)
-    max_diff = maximum(map(abs,[dψ_forward-dψ_central , dψ_forward - dψ_backward, dψ_backward - dψ_central]))
+    max_diff = maximum(abs, (dψ_forward-dψ_central, dψ_forward - dψ_backward, dψ_backward - dψ_central))
     inconsistency = abs(dψ_forward-dψ0) > max_diff && abs(dψ_central-dψ0) > max_diff
     exit = (inconsistency ? -1 : 0)
 
@@ -2448,6 +2470,9 @@ function check_termination_criteria(
                 exit_code += 40
             end
 
+            # Infeasibility check (Fortran: EXIT=EXIT*feas)
+            # If any inactive constraint is violated, negate the convergence code
+            # to signal convergence to a non-feasible point
             if exit_code > 0 && W.l - W.t > 0
                 feas = 1
                 for ii = 1:(W.l - W.t)
@@ -2564,7 +2589,7 @@ end
 
 ##### Enlsip solver #####
 
-#=
+"""
     enlsip(x0,r,c,n,m,q,l;scaling = false,weight_code = 2,MAX_ITER = 100,ε_abs = 1e-10,ε_rel = 1e-3,ε_x = 1e-3,ε_c = 1e-3)
 
 Main function for ENLSIP solver. 
@@ -2615,18 +2640,32 @@ The following arguments are optionnal and have default values:
         - `ε_c = 1e-4` 
         - `ε_rel = 1e-5` 
         - `ε_abs = ε_rank 1e-10`
-=#
+"""
+function enlsip(
+    x0::Vector{T},
+    r::ResidualsFunction,
+    c::ConstraintsFunction,
+    n::Int,
+    m::Int,
+    q::Int,
+    l::Int;
+    scaling::Bool=false,
+    second_derivatives::Bool = true,
+    weight_code::Int=2,
+    MAX_ITER::Int=100,
+    TIME_LIMIT::T=1000.,
+    ε_abs::T=1e-10,
+    ε_rel::T=1e-5,
+    ε_x::T=1e-3,
+    ε_c::T=1e-4,
+    ε_rank::T=1e-10) where {T}
 
-function enlsip(x0::Vector{T},
-    r::ResidualsFunction, c::ConstraintsFunction,
-    n::Int, m::Int, q::Int, l::Int;
-    scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100, TIME_LIMIT::T=1000.,
-    ε_abs::T=eps(T), ε_rel::T=√ε_abs, ε_x::T=ε_rel, ε_c::T=ε_rel, ε_rank::T=ε_rel,
-    ) where {T}
+    # No Hessian computations by forward differences for too large dimension problems
+    second_derivatives = second_derivatives && n + m < 1000
     
     enlsip_info = ExecutionInfo()
 
-    start_time = time()
+
     nb_iteration = 0    
     # Vector of penalty constants
     K = [zeros(T, l) for i = 1:4]
@@ -2639,13 +2678,19 @@ function enlsip(x0::Vector{T},
     x_opt = x0
     f_opt = dot(rx, rx)
     first_iter = Iteration(x0, zeros(T,n), rx, cx, l, 1.0, 0, zeros(T,l), zeros(T,l), 0, 0, 0, 0, zeros(T,n), zeros(T,n), 0.0, 0.0, 0.0, 0.0, 0.0, false, true, false, false, 0, 1, 0)
-   
+
+    start_time = time()
+
     # Initialization of the working set
     working_set = init_working_set(cx, K, first_iter, q, l)
 
     first_iter.t = working_set.t
 
-    active_C = Constraint(cx[working_set.active[1:working_set.t]], A[working_set.active[1:working_set.t], :], scaling, zeros(T,working_set.t))
+    active_C = Constraint(
+        cx[working_set.active[1:working_set.t]],
+        A[working_set.active[1:working_set.t], :],
+        scaling,
+        zeros(T,working_set.t))
 
     # Gradient of the objective function
     ∇fx = transpose(J) * rx
@@ -2664,7 +2709,23 @@ function enlsip(x0::Vector{T},
     previous_iter = copy(first_iter)
 
     # Analys of the lastly computed search direction
-    error_code = search_direction_analys(previous_iter, first_iter, nb_iteration, x0, c, r, rx, cx, active_C, active_cx_sum, p_gn, J, working_set, F_A, F_L11, F_J2)
+    error_code = search_direction_analys(previous_iter,
+                                         first_iter,
+                                         nb_iteration,
+                                         x0,
+                                         c,
+                                         r,
+                                         rx,
+                                         cx,
+                                         active_C,
+                                         active_cx_sum,
+                                         p_gn,
+                                         J,
+                                         working_set,
+                                         F_A,
+                                         F_L11,
+                                         F_J2,
+                                         second_derivatives)
  
     # Computation of penalty constants and steplentgh
     α, w, Ψ_error = compute_steplength(first_iter, previous_iter, x0, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
@@ -2721,7 +2782,7 @@ function enlsip(x0::Vector{T},
     while exit_code == 0
 
         # println( "\nIter $nb_iteration\n")
-        p_gn = zeros(T,n)
+        fill!(p_gn, zero(T))
 
         # Estimation of the Lagrange multipliers
         # Computation of the Gauss-Newton search direction
@@ -2732,7 +2793,23 @@ function enlsip(x0::Vector{T},
         
 
         # Analys of the lastly computed search direction
-        error_code = search_direction_analys(previous_iter, iter, nb_iteration, x, c, r, rx, cx, active_C, active_cx_sum, p_gn, J, working_set,F_A, F_L11, F_J2)
+        error_code = search_direction_analys(previous_iter,
+                                             iter,
+                                             nb_iteration,
+                                             x,
+                                             c,
+                                             r,
+                                             rx,
+                                             cx,
+                                             active_C,
+                                             active_cx_sum,
+                                             p_gn,
+                                             J,
+                                             working_set,
+                                             F_A,
+                                             F_L11,
+                                             F_J2,
+                                             second_derivatives)
         
         # Computation of penalty constants and steplentgh
         α, w, Ψ_error = compute_steplength(iter, previous_iter, x, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
