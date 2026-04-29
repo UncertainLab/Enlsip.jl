@@ -1205,7 +1205,8 @@ function search_direction_analys(
     working_set::WorkingSet,
     F_A::Factorization,
     F_L11::Factorization,
-    F_J2::Factorization) where {T}
+    F_J2::Factorization,
+    second_derivatives::Bool) where {T}
 
     # Data
     (m,n) = size(J)
@@ -1255,16 +1256,27 @@ function search_direction_analys(
             method_code = 1
         end
 
-        # Search direction computed with the method of Newton
+        # Search direction computed with Newton method
     elseif method_code == 2
-        p, newton_error = newton_search_direction(x, c, r, active_cx, working_set, λ, rx, J, F_A, F_L11, rankA)
-        b, d = b_gn, d_gn
-        dimA = -working_set.t
-        dimJ2 = working_set.t - n
-        current_iter.nb_newton_steps += 1
-        if newton_error
-            error_code = -3
+
+        if second_derivatives
+            p, newton_error = newton_search_direction(x, c, r, active_cx, working_set, λ, rx, J, F_A, F_L11, rankA)
+            b, d = b_gn, d_gn
+            dimA = -working_set.t
+            dimJ2 = working_set.t - n
+            current_iter.nb_newton_steps += 1
+            if newton_error
+                error_code = -3
+            end
+        else
+            #= No second derivatives allowed so the algorithm ends there
+            The following values correpsond to the full rank Gauss-Newton
+            It is an arbitrary choice since the algorithm will stop anyway =#
+            p, b, d = p_gn, b_gn, d_gn
+            dimA, dimJ2 = rankA, rankJ2
+            error_code = -4
         end
+
     end
 
     # Update of infos about search direction computation
@@ -2577,7 +2589,7 @@ end
 
 ##### Enlsip solver #####
 
-#=
+"""
     enlsip(x0,r,c,n,m,q,l;scaling = false,weight_code = 2,MAX_ITER = 100,ε_abs = 1e-10,ε_rel = 1e-3,ε_x = 1e-3,ε_c = 1e-3)
 
 Main function for ENLSIP solver. 
@@ -2628,18 +2640,32 @@ The following arguments are optionnal and have default values:
         - `ε_c = 1e-4` 
         - `ε_rel = 1e-5` 
         - `ε_abs = ε_rank 1e-10`
-=#
+"""
+function enlsip(
+    x0::Vector{T},
+    r::ResidualsFunction,
+    c::ConstraintsFunction,
+    n::Int,
+    m::Int,
+    q::Int,
+    l::Int;
+    scaling::Bool=false,
+    second_derivatives::Bool = true,
+    weight_code::Int=2,
+    MAX_ITER::Int=100,
+    TIME_LIMIT::T=1000.,
+    ε_abs::T=1e-10,
+    ε_rel::T=1e-5,
+    ε_x::T=1e-3,
+    ε_c::T=1e-4,
+    ε_rank::T=1e-10) where {T}
 
-function enlsip(x0::Vector{T},
-    r::ResidualsFunction, c::ConstraintsFunction,
-    n::Int, m::Int, q::Int, l::Int;
-    scaling::Bool=false, weight_code::Int=2, MAX_ITER::Int=100, TIME_LIMIT::T=1000.,
-    ε_abs::T=eps(T), ε_rel::T=√ε_abs, ε_x::T=ε_rel, ε_c::T=ε_rel, ε_rank::T=ε_rel,
-    ) where {T}
+    # No Hessian computations by forward differences for too large dimension problems
+    second_derivatives = second_derivatives && n + m < 1000
     
     enlsip_info = ExecutionInfo()
 
-    start_time = time()
+
     nb_iteration = 0    
     # Vector of penalty constants
     K = [zeros(T, l) for i = 1:4]
@@ -2652,13 +2678,19 @@ function enlsip(x0::Vector{T},
     x_opt = x0
     f_opt = dot(rx, rx)
     first_iter = Iteration(x0, zeros(T,n), rx, cx, l, 1.0, 0, zeros(T,l), zeros(T,l), 0, 0, 0, 0, zeros(T,n), zeros(T,n), 0.0, 0.0, 0.0, 0.0, 0.0, false, true, false, false, 0, 1, 0)
-   
+
+    start_time = time()
+
     # Initialization of the working set
     working_set = init_working_set(cx, K, first_iter, q, l)
 
     first_iter.t = working_set.t
 
-    active_C = Constraint(cx[working_set.active[1:working_set.t]], A[working_set.active[1:working_set.t], :], scaling, zeros(T,working_set.t))
+    active_C = Constraint(
+        cx[working_set.active[1:working_set.t]],
+        A[working_set.active[1:working_set.t], :],
+        scaling,
+        zeros(T,working_set.t))
 
     # Gradient of the objective function
     ∇fx = transpose(J) * rx
@@ -2677,7 +2709,23 @@ function enlsip(x0::Vector{T},
     previous_iter = copy(first_iter)
 
     # Analys of the lastly computed search direction
-    error_code = search_direction_analys(previous_iter, first_iter, nb_iteration, x0, c, r, rx, cx, active_C, active_cx_sum, p_gn, J, working_set, F_A, F_L11, F_J2)
+    error_code = search_direction_analys(previous_iter,
+                                         first_iter,
+                                         nb_iteration,
+                                         x0,
+                                         c,
+                                         r,
+                                         rx,
+                                         cx,
+                                         active_C,
+                                         active_cx_sum,
+                                         p_gn,
+                                         J,
+                                         working_set,
+                                         F_A,
+                                         F_L11,
+                                         F_J2,
+                                         second_derivatives)
  
     # Computation of penalty constants and steplentgh
     α, w, Ψ_error = compute_steplength(first_iter, previous_iter, x0, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
@@ -2745,7 +2793,23 @@ function enlsip(x0::Vector{T},
         
 
         # Analys of the lastly computed search direction
-        error_code = search_direction_analys(previous_iter, iter, nb_iteration, x, c, r, rx, cx, active_C, active_cx_sum, p_gn, J, working_set,F_A, F_L11, F_J2)
+        error_code = search_direction_analys(previous_iter,
+                                             iter,
+                                             nb_iteration,
+                                             x,
+                                             c,
+                                             r,
+                                             rx,
+                                             cx,
+                                             active_C,
+                                             active_cx_sum,
+                                             p_gn,
+                                             J,
+                                             working_set,
+                                             F_A,
+                                             F_L11,
+                                             F_J2,
+                                             second_derivatives)
         
         # Computation of penalty constants and steplentgh
         α, w, Ψ_error = compute_steplength(iter, previous_iter, x, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
