@@ -2497,9 +2497,9 @@ function check_termination_criteria(
         if nb_iter >= max_iter
             exit_code = -2
 
-            # Criterion 12
-        elseif error_code == -3
-            exit_code = -5
+        # Criterion 10 to 12 (Newton step related)
+        elseif -5 <= error_code <= -3
+            exit_code = error_code
             # Too many Newton steps
         
         elseif iter.nb_newton_steps > 5
@@ -2517,7 +2517,6 @@ function check_termination_criteria(
             exit_code = -11
         end
 
-        # TODO : implement critera 10-11
     end
     return exit_code
 end
