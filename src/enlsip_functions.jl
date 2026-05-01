@@ -2806,7 +2806,20 @@ function enlsip(
                                              second_derivatives)
         
         # Computation of penalty constants and steplentgh
-        α, w, Ψ_error = compute_steplength(iter, previous_iter, x, r, rx, J, c, cx, A, active_C, working_set, K, weight_code)
+        α, w, Ψ_error = compute_steplength(
+                                        iter, 
+                                        previous_iter, 
+                                        x, 
+                                        r, 
+                                        rx, 
+                                        J, 
+                                        c, 
+                                        cx, 
+                                        A, 
+                                        active_C, 
+                                        working_set, 
+                                        K, 
+                                        weight_code)
         iter.α = α
         iter.w = w
         x = x + α * iter.p

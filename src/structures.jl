@@ -235,11 +235,11 @@ function remove_constraint!(W::WorkingSet, s::Int)
 
     l, t = W.l, W.t
 
-    # Ajout de la contrainte à l'ensemble inactif
+    # Add constraint to active set
     W.inactive[l-t+1] = W.active[s]
     sort!(@view W.inactive[1:l-t+1])
 
-    # Réorganisation de l'ensemble actif
+    # Reorganize active set
     for i = s:t-1
         W.active[i] = W.active[i+1]
     end
