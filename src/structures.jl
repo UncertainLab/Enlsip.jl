@@ -178,53 +178,6 @@ function evaluate_scaling!(C::Constraint)
 end
 
 
-
-"""
-    CommonsVars
-
-Stores data about the global conduct of the algorithm.
-
-* `nb_restrarts` : current number of consecutive restarts
-* `nb_newton_steps` : number of iterates computed with the Newton method
-* `lattry` : largest dimension used to compute the search direction
-* `best_progress` : records the best progress achieved in consecutive restart iterations
-"""
-mutable struct CommonVars <: AbstractEnlsipInfo
-    nb_restarts::Int
-    nb_newton_steps::Int
-    lattry::Int
-    best_progress::Float64
-end
-
-"""
-    CommonsVars(n)
-
-Initliazes a `CommonsVars` datatype with `lattry` attribute set to `n`. Other attributes are set to `0`.
-"""
-CommonVars(n::Int) = CommonVars(0, 0, n, 0.0)
-
-
-"""
-    Steplength
-
-Datatype storing info about the steplength computed at a given iteration.
-
-* `value` : steplength computed by the linesearch procedure
-
-* `low` : lower bound for the steplength. In normal configuration, it is the upper bound (see below) divided by 3000
-
-* `upp` : upper bound for the steplength. Given by the maximum steplength value that does not violate the linearized inactive constraints.
-If this value if not defined, it is set to `3`
-
-* `index_constraint_upp` : index of the constraint for which the upper bound above is reached.
-"""
-mutable struct Steplength <: AbstractEnlsipInfo
-    value::Float64
-    low::Float64
-    upp::Float64
-    index_constraint_upp::Int
-end
-
 #=
     WorkingSet
 

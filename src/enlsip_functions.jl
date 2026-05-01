@@ -555,7 +555,7 @@ function minmax_lagrangian_mult(
         rows = (scaling ? 1.0 ./ diag_scale : diag_scale)
         for i = q+1:t
             λ_i = λ[i]
-            if λ_i*rows[i] <= -sq_rel && λ_i < sigmin
+            if λ_i * rows[i] <= -sq_rel && λ_i < sigmin
                 sigmin = λ_i
             end
         end
@@ -1162,8 +1162,7 @@ function choose_subspace_dimensions(
         d = F_J2.Q' * d
     end
 
-    # previous_dimJ2 = abs(previous_iter.rankJ2) + previous_iter.t - t
-    previous_dimJ2 = abs(previous_iter.dimJ2) + previous_iter.t -t
+    previous_dimJ2 = abs(previous_iter.dimJ2) + previous_iter.t - t
     nrm_d_asprev = norm(d[1:previous_dimJ2])
     nrm_d = norm(d)
     residual_progress = dot(previous_iter.rx, previous_iter.rx) - rx_sum
@@ -1233,7 +1232,7 @@ function search_direction_analys(
     
     restart = current_iter.restart
 
-    #Analys of search direction computed with Gauss-Newton method
+    # Analys of search direction computed with Gauss-Newton method
     error_code = 0
     method_code, β = check_gn_direction(nrm_b1_gn, nrm_d1_gn, nrm_d1_asprev, nrm_d_gn, active_cx_sum, iter_number, rankA, n, m, restart, constraint_added, constraint_deleted, working_set, cx, λ,
         previous_iter, scaling, diag_scale)
@@ -1256,7 +1255,7 @@ function search_direction_analys(
             method_code = 1
         end
 
-        # Search direction computed with Newton method
+    # Search direction computed with Newton method
     elseif method_code == 2
 
         if second_derivatives
@@ -1608,7 +1607,6 @@ function penalty_weight_update(
         w = w_old[:]
         max_norm_weight_update!(nrm_Ap, rmy, α_w, δ, w, active, t, K)
     elseif norm_code == 2
-
         w = euclidean_norm_weight_update(Ap*nrm_Ap, cx*nrm_cx, active, t, rmy, dimA, w_old, K)
     end
     #                               T                       T
@@ -1827,7 +1825,6 @@ function two_roots(b::T, c::T, d::T, a::T, x_min::T) where {T}
     # β1 is the global minimizer of s(α).
     # If d is close to zero the root β1 is stable while β2 and β3 become unstable
     β1 = t * cos(φ / 3) - a / 3
-    
     β2 = t * cos((φ + 2 * π) / 3) - a / 3
     β3 = t * cos((φ + 4 * π) / 3) - a / 3
 
@@ -1863,7 +1860,6 @@ function minrm(
     end
     return α_hat, sα, β_hat, sβ
 end
-
 
 
 # REDC
@@ -1925,7 +1921,6 @@ function goldstein_armijo_step(
     end
     return u, exit
 end
-
 
 
 # LINEC
