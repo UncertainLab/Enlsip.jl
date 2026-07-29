@@ -1,7 +1,7 @@
 name = "Enlsip"
 uuid = "d5306a6b-d590-428d-a53a-eb3bb2d36f2d"
-authors = ["pierre-borie"]
 version = "0.9.8"
+authors = ["pierre-borie"]
 
 [deps]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
@@ -11,7 +11,7 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [compat]
 ForwardDiff = "0.10, 1"
-Polynomials = "^4.0.6"
+Polynomials = "^4"
 julia = "^1.8.0"
 
 [extras]
